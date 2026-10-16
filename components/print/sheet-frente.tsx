@@ -9,7 +9,6 @@
 
 import React from 'react';
 import type { StudentWithCourses, ScheduleConfig } from '../../types/database';
-import { formatDateForSheet, formatPhoneForSheet } from '../../lib/utils/date-utils';
 import { MICROLINS_LOGO_BASE64 } from '../../lib/constants/microlins-logo';
 
 interface SheetFrenteProps {
@@ -17,51 +16,46 @@ interface SheetFrenteProps {
   schedule?: ScheduleConfig;
 }
 
-const WEEKDAYS = [
-  'Segunda',
-  'Terça',
-  'Quarta',
-  'Quinta',
-  'Sexta',
-  'Sábado',
-  'Domingo',
-];
+const WEEKDAYS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
-export function SheetFrente({ student, schedule }: SheetFrenteProps) {
-  // Matriz de até 18 cursos organizados em 3 colunas de 6 linhas (Linhas 10 a 15 do Excel)
-  const studentCourses = [...(student.cursos || [])].sort((a, b) => a.ordem - b.ordem);
-  const courseMatrix: { slotNumber: number; name: string }[][] = [
-    // Coluna 1: 1 a 6
-    Array.from({ length: 6 }, (_, i) => {
-      const slot = i + 1;
-      const found = studentCourses.find((c) => c.ordem === slot) || studentCourses[i];
-      return { slotNumber: slot, name: found?.nome || '' };
-    }),
-    // Coluna 2: 7 a 12
-    Array.from({ length: 6 }, (_, i) => {
-      const slot = i + 7;
-      const found = studentCourses.find((c) => c.ordem === slot) || studentCourses[i + 6];
-      return { slotNumber: slot, name: found?.nome || '' };
-    }),
-    // Coluna 3: 13 a 18
-    Array.from({ length: 6 }, (_, i) => {
-      const slot = i + 13;
-      const found = studentCourses.find((c) => c.ordem === slot) || studentCourses[i + 12];
-      return { slotNumber: slot, name: found?.nome || '' };
-    }),
-  ];
+function formatDateForSheet(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const clean = dateStr.trim();
+  if (clean.includes('/')) return clean;
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return clean;
+}
 
-  // Recupera horário por dia da semana
-  const activeDays = schedule?.diasSemana || [];
-  const getDaySchedule = (dayName: string) => {
-    const fullName = `${dayName}-feira`;
-    const isDayActive =
-      activeDays.includes(dayName) ||
-      activeDays.includes(fullName) ||
-      (schedule?.diasConfig && (schedule.diasConfig[dayName] || schedule.diasConfig[fullName]));
+function formatPhoneForSheet(phone: string | null | undefined): string {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return phone;
+}
+
+export function SheetFrente({ student, schedule: propSchedule }: SheetFrenteProps) {
+  const getCourseName = (index: number) => {
+    const course = student.cursos?.[index - 1];
+    return course ? course.nome : '';
+  };
+
+  const getDaySchedule = (day: string) => {
+    const schedule = propSchedule || student.horarios;
+    const isDayActive = schedule?.dias?.some(
+      (d) => d.toLowerCase().includes(day.toLowerCase()) || day.toLowerCase().includes(d.toLowerCase())
+    );
 
     if (schedule?.diasConfig) {
-      if (schedule.diasConfig[dayName]) return schedule.diasConfig[dayName];
+      if (schedule.diasConfig[day]) return schedule.diasConfig[day];
+      const fullName = `${day}-feira`;
       if (schedule.diasConfig[fullName]) return schedule.diasConfig[fullName];
     }
 
@@ -72,20 +66,8 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
       };
     }
 
-    // No modelo Excel, células sem horário exibem "h" centralizado
     return { inicio: 'h', fim: 'h' };
   };
-
-  // 7 Marcos Pedagógicos (Linhas 7 a 15 do Excel)
-  const milestones = [
-    { label: 'Linha da vida', date: formatDateForSheet(student.data_linha_vida), doubleRow: true },
-    { label: 'Form 1', date: formatDateForSheet(student.data_form1), doubleRow: false },
-    { label: 'Form 2', date: formatDateForSheet(student.data_form2), doubleRow: false },
-    { label: 'Dream Day', date: formatDateForSheet(student.data_dreamday), doubleRow: true },
-    { label: 'Fechamento 1', date: formatDateForSheet(student.data_fechamento1), doubleRow: false },
-    { label: 'Fechamento 2', date: formatDateForSheet(student.data_fechamento2), doubleRow: false },
-    { label: 'Fechamento 3', date: formatDateForSheet(student.data_fechamento3), doubleRow: false },
-  ];
 
   return (
     <div
@@ -95,300 +77,491 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
         height: '286mm',
         maxHeight: '286mm',
         overflow: 'hidden',
-        fontSize: '8.5px',
         fontFamily: "Calibri, 'Segoe UI', Arial, sans-serif",
       }}
     >
-      {/* 1. TÍTULO PRINCIPAL + LOGO MICROLINS (Linha 1 do ModeloFicha.xlsx: A1:L1 e M1:P1) */}
-      <div className="grid grid-cols-[76%_24%] border-b border-black h-[10.5mm]">
-        {/* Lado Esquerdo (A1:L1): Título em Azul com fundo cinza claro #D9D9D9 */}
-        <div className="bg-[#D9D9D9] border-r border-black flex items-center justify-center px-2">
-          <h1 className="text-[14px] font-bold text-[#0070C0] tracking-wide text-center">
-            Ficha de Acompanhamento Individual do Aluno
-          </h1>
-        </div>
+      {/* ============================================================== */}
+      {/* 1. TABELA PRINCIPAL DE DADOS E CARREIRA (Linhas 1 a 15 Excel)  */}
+      {/* ============================================================== */}
+      <table
+        className="w-full border-collapse border border-black table-fixed text-[8px]"
+        style={{ width: '100%', borderSpacing: 0 }}
+      >
+        <colgroup>
+          {/* Matriz exata de 16 Colunas A..P do ModeloFicha.xlsx */}
+          <col style={{ width: '8.256%' }} />  {/* A: Data / Matrícula */}
+          <col style={{ width: '4.917%' }} />  {/* B: Horário */}
+          <col style={{ width: '12.430%' }} /> {/* C */}
+          <col style={{ width: '13.636%' }} /> {/* D: Nome / Instrutor */}
+          <col style={{ width: '5.009%' }} />  {/* E */}
+          <col style={{ width: '5.751%' }} />  {/* F */}
+          <col style={{ width: '4.638%' }} />  {/* G */}
+          <col style={{ width: '5.195%' }} />  {/* H */}
+          <col style={{ width: '4.824%' }} />  {/* I */}
+          <col style={{ width: '3.432%' }} />  {/* J */}
+          <col style={{ width: '1.855%' }} />  {/* K */}
+          <col style={{ width: '6.122%' }} />  {/* L (Fim do bloco A..L = 76.067%) */}
 
-        {/* Lado Direito (M1:P1): Logotipo oficial Microlins + V1.0 */}
-        <div className="bg-white flex flex-col items-center justify-center p-1">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={MICROLINS_LOGO_BASE64}
-            alt="Microlins"
-            className="h-[5.5mm] w-auto object-contain mx-auto"
-          />
-          <span className="text-[6.5px] text-slate-700 tracking-tight text-center leading-none mt-0.5">
-            Gerado por aplicação. V1.0
-          </span>
-        </div>
-      </div>
+          <col style={{ width: '3.432%' }} />  {/* M: Vertical 'De olho na carreira' */}
+          <col style={{ width: '2.690%' }} />  {/* N: Rótulo do Marco */}
+          <col style={{ width: '5.751%' }} />  {/* O: Rótulo do Marco (continuação) */}
+          <col style={{ width: '12.059%' }} /> {/* P: Data do Marco / Término */}
+        </colgroup>
 
-      {/* 2. CORPO INTERMEDIÁRIO DUAS COLUNAS PARALELAS (Linhas 2 a 15 do Excel) */}
-      <div className="grid grid-cols-[76%_24%] border-b border-black">
-        {/* ============================================================== */}
-        {/* COLUNA ESQUERDA (Colunas A a L do Excel - 76% da largura)      */}
-        {/* Contém: Dados Pessoais (2-5) + Horários (6-8) + Cursos (9-15)  */}
-        {/* ============================================================== */}
-        <div className="border-r border-black flex flex-col">
-          {/* A) DADOS CADASTRAIS (Linhas 2 a 5 do Excel) */}
-          <div className="divide-y divide-black">
-            {/* Linha 2: Matrícula e Nome */}
-            <div className="grid grid-cols-[33%_67%] h-[4.6mm] items-center px-1.5 divide-x divide-black">
-              <div className="truncate pr-1">
-                <span className="text-slate-800">Matrícula: </span>
-                <span className="font-bold">{student.matricula || ''}</span>
-              </div>
-              <div className="truncate pl-1.5">
-                <span className="text-slate-800">Nome do Aluno: </span>
-                <span className="font-bold text-[9px] uppercase">{student.nome || ''}</span>
-              </div>
-            </div>
+        <tbody>
+          {/* LINHA 1: TÍTULO PRINCIPAL + LOGO MICROLINS (A1:P1) */}
+          <tr style={{ height: '10.5mm' }}>
+            <td
+              colSpan={12}
+              className="bg-[#D9D9D9] border-b border-r border-black text-center font-bold text-[#0070C0] text-[13.5px] px-2"
+            >
+              Ficha de Acompanhamento Individual do Aluno
+            </td>
+            <td
+              colSpan={4}
+              className="bg-white border-b border-black text-center p-1 align-middle"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={MICROLINS_LOGO_BASE64}
+                alt="Microlins"
+                className="h-[5.5mm] w-auto object-contain mx-auto"
+              />
+              <span className="block text-[6.5px] text-slate-700 tracking-tight text-center leading-none mt-0.5">
+                Gerado por aplicação. V1.0
+              </span>
+            </td>
+          </tr>
 
-            {/* Linha 3: Email */}
-            <div className="h-[4.6mm] flex items-center px-1.5 truncate">
+          {/* LINHA 2: MATRÍCULA | NOME | CABEÇALHOS DE DATAS */}
+          <tr style={{ height: '4.6mm' }}>
+            <td colSpan={3} className="border-b border-r border-black px-1.5 truncate">
+              <span className="text-slate-800">Matrícula: </span>
+              <span className="font-bold">{student.matricula || ''}</span>
+            </td>
+            <td colSpan={9} className="border-b border-r border-black px-1.5 truncate">
+              <span className="text-slate-800">Nome do Aluno: </span>
+              <span className="font-bold text-[9px] uppercase">{student.nome || ''}</span>
+            </td>
+            <td
+              colSpan={3}
+              rowSpan={3}
+              className="bg-[#D9D9D9] border-b border-r border-black text-center p-1 text-[7.5px] font-semibold leading-tight text-slate-800 align-middle"
+            >
+              Data inicio do curso:
+            </td>
+            <td
+              colSpan={1}
+              rowSpan={3}
+              className="bg-[#D9D9D9] border-b border-black text-center p-1 text-[7.5px] font-semibold leading-tight text-slate-800 align-middle"
+            >
+              Data prevista para término do curso:
+            </td>
+          </tr>
+
+          {/* LINHA 3: EMAIL */}
+          <tr style={{ height: '4.6mm' }}>
+            <td colSpan={12} className="border-b border-r border-black px-1.5 truncate">
               <span className="text-slate-800 mr-1">Email: </span>
               <span className="truncate">{student.email || ''}</span>
-            </div>
+            </td>
+          </tr>
 
-            {/* Linha 4: Data de Nascimento e Instrutor */}
-            <div className="grid grid-cols-[38%_62%] h-[4.6mm] items-center px-1.5 divide-x divide-black">
-              <div className="truncate pr-1">
-                <span className="text-slate-800">Data Nascimento: </span>
-                <span>{formatDateForSheet(student.data_nascimento)}</span>
-              </div>
-              <div className="truncate pl-1.5">
-                <span className="text-slate-800">Instrutor: </span>
-                <span className="font-medium">{student.instrutor || ''}</span>
-              </div>
-            </div>
+          {/* LINHA 4: DATA NASCIMENTO | INSTRUTOR */}
+          <tr style={{ height: '4.6mm' }}>
+            <td colSpan={3} className="border-b border-r border-black px-1.5 truncate">
+              <span className="text-slate-800">Data Nascimento: </span>
+              <span>{formatDateForSheet(student.data_nascimento)}</span>
+            </td>
+            <td colSpan={9} className="border-b border-r border-black px-1.5 truncate">
+              <span className="text-slate-800">Instrutor: </span>
+              <span className="font-medium">{student.instrutor || ''}</span>
+            </td>
+          </tr>
 
-            {/* Linha 5: Telefone */}
-            <div className="h-[4.6mm] flex items-center px-1.5 truncate">
+          {/* LINHA 5: TELEFONE | VALORES DAS DATAS DE INÍCIO E TÉRMINO */}
+          <tr style={{ height: '4.6mm' }}>
+            <td colSpan={12} className="border-b border-r border-black px-1.5 truncate">
               <span className="text-slate-800 mr-1">Telefone: </span>
               <span>{formatPhoneForSheet(student.telefone)}</span>
-            </div>
-          </div>
+            </td>
+            <td
+              colSpan={3}
+              rowSpan={2}
+              className="border-b border-r border-black text-center font-bold text-[9px] align-middle bg-white"
+            >
+              {formatDateForSheet(student.data_inicio_curso)}
+            </td>
+            <td
+              colSpan={1}
+              rowSpan={2}
+              className="border-b border-black text-center font-bold text-[9px] align-middle bg-white"
+            >
+              {formatDateForSheet(student.data_termino_curso)}
+            </td>
+          </tr>
 
-          {/* B) QUADRO DE HORÁRIOS & DIAS DA SEMANA (Linhas 6 a 8 do Excel) */}
-          <div className="border-t border-black text-[8px]">
-            {/* Linha 6: Dias da Semana */}
-            <div className="grid grid-cols-[14%_repeat(7,_12.28%)] h-[4.4mm] items-center divide-x divide-black border-b border-black text-center bg-white">
-              <span className="text-left px-1 text-[7px] text-slate-900 font-semibold">
-                Dia da semana:
-              </span>
-              {WEEKDAYS.map((w) => (
-                <span key={w} className="font-semibold text-slate-900 text-[7.5px] truncate px-0.5">
-                  {w}
-                </span>
-              ))}
-            </div>
-
-            {/* Linha 7: Horário Inicial */}
-            <div className="grid grid-cols-[14%_repeat(7,_12.28%)] h-[4.4mm] items-center divide-x divide-black border-b border-black text-center bg-white">
-              <span className="text-left px-1 text-[7px] text-slate-800">
-                Horário inicial:
-              </span>
-              {WEEKDAYS.map((w) => {
-                const sch = getDaySchedule(w);
-                const isPlaceholder = sch.inicio === 'h' || !sch.inicio;
-                return (
-                  <span
-                    key={w}
-                    className={`text-[7.5px] truncate ${
-                      isPlaceholder ? 'text-slate-400 font-mono' : 'font-bold text-slate-900'
-                    }`}
-                  >
-                    {sch.inicio || 'h'}
-                  </span>
-                );
-              })}
-            </div>
-
-            {/* Linha 8: Horário Final */}
-            <div className="grid grid-cols-[14%_repeat(7,_12.28%)] h-[4.4mm] items-center divide-x divide-black border-b border-black text-center bg-white">
-              <span className="text-left px-1 text-[7px] text-slate-800">
-                Horário final:
-              </span>
-              {WEEKDAYS.map((w) => {
-                const sch = getDaySchedule(w);
-                const isPlaceholder = sch.fim === 'h' || !sch.fim;
-                return (
-                  <span
-                    key={w}
-                    className={`text-[7.5px] truncate ${
-                      isPlaceholder ? 'text-slate-400 font-mono' : 'font-bold text-slate-900'
-                    }`}
-                  >
-                    {sch.fim || 'h'}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* C) CURSOS CONTRATADOS (Linhas 9 a 15 do Excel - 18 Slots) */}
-          <div className="flex flex-col flex-1">
-            {/* Linha 9: Cabeçalho da Seção de Cursos */}
-            <div className="h-[4.4mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center font-bold text-[#0070C0] text-[8px]">
-              Cursos / Módulos Contratados:
-            </div>
-
-            {/* Linhas 10 a 15: Grade 3 Colunas x 6 Linhas de Cursos */}
-            <div className="grid grid-cols-3 divide-x divide-black flex-1 text-[8px]">
-              {courseMatrix.map((col, colIdx) => (
-                <div key={colIdx} className="divide-y divide-black">
-                  {col.map((item) => (
-                    <div
-                      key={item.slotNumber}
-                      className="h-[4.4mm] px-1 flex items-center overflow-hidden bg-white"
-                    >
-                      <span className="font-semibold text-slate-700 mr-1 shrink-0">
-                        {item.slotNumber}.
-                      </span>
-                      <span
-                        className="truncate font-medium text-slate-900 text-[7.5px]"
-                        title={item.name}
+          {/* LINHA 6: QUADRO DE HORÁRIOS - DIAS DA SEMANA */}
+          <tr style={{ height: '4.4mm' }}>
+            <td colSpan={12} className="p-0 border-b border-r border-black">
+              <table className="w-full h-full border-collapse table-fixed text-center" style={{ borderSpacing: 0 }}>
+                <colgroup>
+                  <col style={{ width: '13.83%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                </colgroup>
+                <tbody>
+                  <tr style={{ height: '4.4mm' }} className="bg-white">
+                    <td className="border-r border-black text-left px-1 font-semibold text-[7.5px] text-slate-900">
+                      Dia da semana:
+                    </td>
+                    {WEEKDAYS.map((d, idx) => (
+                      <td
+                        key={d}
+                        className={`font-semibold text-[7.5px] ${idx < 6 ? 'border-r border-black' : ''}`}
                       >
-                        {item.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+                        {d}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
 
-        {/* ============================================================== */}
-        {/* COLUNA DIREITA (Colunas M a P do Excel - 24% da largura)       */}
-        {/* Contém: Início/Término (2-6) + De olho na carreira (7-15)      */}
-        {/* ============================================================== */}
-        <div className="flex flex-col">
-          {/* A) DATAS DE INÍCIO E TÉRMINO DO CURSO (Linhas 2 a 6 do Excel) */}
-          <div className="grid grid-cols-2 divide-x divide-black border-b border-black text-center h-[23.0mm]">
-            <div className="flex flex-col justify-between">
-              <div className="h-[14.5mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center p-1 text-[7.5px] leading-tight text-slate-800 font-semibold">
-                Data inicio do curso:
-              </div>
-              <div className="flex-1 flex items-center justify-center font-bold text-[9px] py-1 bg-white">
-                {formatDateForSheet(student.data_inicio_curso)}
-              </div>
-            </div>
-            <div className="flex flex-col justify-between">
-              <div className="h-[14.5mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center p-1 text-[7.5px] leading-tight text-slate-800 font-semibold">
-                Data prevista para término do curso:
-              </div>
-              <div className="flex-1 flex items-center justify-center font-bold text-[9px] py-1 bg-white">
-                {formatDateForSheet(student.data_termino_curso)}
-              </div>
-            </div>
-          </div>
-
-          {/* B) DE OLHO NA CARREIRA DO ALUNO + 7 MARCOS (Linhas 7 a 15 do Excel) */}
-          <div className="grid grid-cols-[16%_84%] divide-x divide-black flex-1 text-[7.5px]">
-            {/* Faixa Lateral Vertical (M7:M15): "De olho na carreira do aluno" */}
-            <div className="bg-[#D9D9D9] flex items-center justify-center p-0.5 font-bold text-[#0070C0] text-center select-none overflow-hidden">
-              <span
-                className="inline-block transform -rotate-90 whitespace-nowrap text-[7.5px] font-bold tracking-tight"
-                style={{ transformOrigin: 'center center' }}
+          {/* LINHA 7: HORÁRIO INICIAL | INÍCIO DA CARREIRA DO ALUNO */}
+          <tr style={{ height: '4.4mm' }}>
+            <td colSpan={12} className="p-0 border-b border-r border-black">
+              <table className="w-full h-full border-collapse table-fixed text-center" style={{ borderSpacing: 0 }}>
+                <colgroup>
+                  <col style={{ width: '13.83%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                </colgroup>
+                <tbody>
+                  <tr style={{ height: '4.4mm' }} className="bg-white">
+                    <td className="border-r border-black text-left px-1 text-[7.5px] text-slate-800">
+                      Horário inicial:
+                    </td>
+                    {WEEKDAYS.map((d, idx) => (
+                      <td
+                        key={d}
+                        className={`text-[7.5px] ${idx < 6 ? 'border-r border-black' : ''}`}
+                      >
+                        {getDaySchedule(d).inicio}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+            {/* Faixa vertical: "De olho na carreira do aluno" (Linhas 7 a 15) */}
+            <td
+              rowSpan={9}
+              className="bg-[#D9D9D9] border-b border-r border-black text-center font-bold text-[#0070C0] p-0 select-none overflow-hidden"
+              style={{ verticalAlign: 'middle' }}
+            >
+              <div
+                className="transform -rotate-90 whitespace-nowrap text-[7px] font-bold tracking-tight text-center mx-auto"
+                style={{ width: '100%', minWidth: '40mm' }}
               >
                 De olho na carreira do aluno
-              </span>
-            </div>
+              </div>
+            </td>
+            {/* Marco 1: Linha da vida (Linha 7 e 8) */}
+            <td colSpan={2} rowSpan={2} className="border-b border-r border-black px-1 text-slate-800 text-[7.5px] align-middle">
+              Linha da vida
+            </td>
+            <td colSpan={1} rowSpan={2} className="border-b border-black text-center font-bold text-[8px] align-middle bg-white">
+              {formatDateForSheet(student.data_linha_vida)}
+            </td>
+          </tr>
 
-            {/* Tabela de 7 Marcos Pedagógicos (N7:P15) */}
-            <div className="flex flex-col divide-y divide-black justify-between text-[7.5px]">
-              {milestones.map((m, idx) => (
-                <div
-                  key={idx}
-                  className={`grid grid-cols-[55%_45%] divide-x divide-black items-center ${
-                    m.doubleRow ? 'h-[5.8mm]' : 'h-[4.4mm]'
-                  } bg-white`}
-                >
-                  <div className="px-1 text-slate-800 truncate">{m.label}</div>
-                  <div className="px-1 text-center font-bold text-slate-900 truncate">
-                    {m.date}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+          {/* LINHA 8: HORÁRIO FINAL */}
+          <tr style={{ height: '4.4mm' }}>
+            <td colSpan={12} className="p-0 border-b border-r border-black">
+              <table className="w-full h-full border-collapse table-fixed text-center" style={{ borderSpacing: 0 }}>
+                <colgroup>
+                  <col style={{ width: '13.83%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                  <col style={{ width: '12.31%' }} />
+                </colgroup>
+                <tbody>
+                  <tr style={{ height: '4.4mm' }} className="bg-white">
+                    <td className="border-r border-black text-left px-1 text-[7.5px] text-slate-800">
+                      Horário final:
+                    </td>
+                    {WEEKDAYS.map((d, idx) => (
+                      <td
+                        key={d}
+                        className={`text-[7.5px] ${idx < 6 ? 'border-r border-black' : ''}`}
+                      >
+                        {getDaySchedule(d).fim}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
 
-      {/* 3. TABELA DE REGISTRO DE AULAS (33 LINHAS - Linhas 16 a 50 do Excel) */}
-      <div className="border-b border-black">
-        {/* Cabeçalho Composto da Tabela de Frequência / Estágio */}
-        <div className="bg-[#D9D9D9] border-b border-black text-[#0070C0] font-bold text-center text-[7.5px]">
-          {/* Linha 16: Linha Superior do Cabeçalho */}
-          <div className="grid grid-cols-[8.26%_4.92%_26.07%_25.42%_5.28%_6.12%_23.93%] divide-x divide-black h-[4.2mm] items-center">
-            <div className="row-span-2">Data</div>
-            <div className="row-span-2">Horário</div>
-            <div className="row-span-2">Curso / Aula / Conteúdo</div>
-            <div className="border-b border-black">Estágio da Aula</div>
-            <div className="row-span-2">Instrutor</div>
-            <div className="row-span-2">Coord.</div>
-            <div className="row-span-2">Assinatura do Aluno</div>
-          </div>
-          {/* Linha 17: Subcolunas de Estágio da Aula (Nomes integrais idênticos ao Excel) */}
-          <div className="grid grid-cols-[8.26%_4.92%_26.07%_25.42%_5.28%_6.12%_23.93%] divide-x divide-black h-[3.8mm] items-center border-t border-black text-[7px] text-[#0070C0]">
-            <div></div>
-            <div></div>
-            <div></div>
-            <div className="grid grid-cols-5 divide-x divide-black h-full items-center font-bold text-[6.5px]">
-              <div>Aula</div>
-              <div>Apostila</div>
-              <div>Teste 1</div>
-              <div>Teste 2</div>
-              <div>Teste 3</div>
-            </div>
-            <div></div>
-            <div></div>
-            <div></div>
-          </div>
-        </div>
-
-        {/* Linhas 18 a 50: Exatamente 33 Linhas de Registro Pautadas */}
-        <div className="divide-y divide-black/80 font-mono text-[7px]">
-          {Array.from({ length: 33 }).map((_, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-[8.26%_4.92%_26.07%_25.42%_5.28%_6.12%_23.93%] divide-x divide-black/80 h-[3.95mm] items-center text-center bg-white"
+          {/* LINHA 9: CABEÇALHO CURSOS CONTRATADOS | FORM 1 */}
+          <tr style={{ height: '4.4mm' }}>
+            <td
+              colSpan={12}
+              className="bg-[#D9D9D9] border-b border-r border-black text-center font-bold text-[#0070C0] text-[8px]"
             >
-              <div className="text-slate-400 font-mono tracking-tighter text-[6.5px]">
-                / &nbsp; /
-              </div>
-              <div className="text-slate-400 font-mono text-[6.5px]">
-                &nbsp;h&nbsp;
-              </div>
-              <div></div>
-              <div className="grid grid-cols-5 divide-x divide-black/80 h-full">
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-              </div>
-              <div></div>
-              <div></div>
-              <div></div>
-            </div>
-          ))}
-        </div>
-      </div>
+              Cursos / Módulos Contratados:
+            </td>
+            <td colSpan={2} className="border-b border-r border-black px-1 text-slate-800 text-[7.5px] align-middle">
+              Form 1
+            </td>
+            <td colSpan={1} className="border-b border-black text-center font-bold text-[8px] align-middle bg-white">
+              {formatDateForSheet(student.data_form1)}
+            </td>
+          </tr>
 
-      {/* 4. ANOTAÇÕES COMPLEMENTARES (Linhas 51 a 59 do Excel - 8 Linhas Pautadas) */}
-      <div className="flex flex-col">
-        {/* Linha 51: Cabeçalho */}
-        <div className="h-[4.2mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center font-bold text-[#0070C0] text-[8px]">
-          Anotações complementares
-        </div>
-        {/* Linhas 52 a 59: 8 Linhas pautadas em branco */}
-        <div className="divide-y divide-black">
-          {Array.from({ length: 8 }).map((_, idx) => (
-            <div key={idx} className="h-[3.9mm] bg-white w-full" />
+          {/* LINHA 10: CURSOS 1, 7, 13 | FORM 2 */}
+          <tr style={{ height: '4.4mm' }}>
+            <td colSpan={3} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">1.</span>
+              <span>{getCourseName(1)}</span>
+            </td>
+            <td colSpan={4} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">7.</span>
+              <span>{getCourseName(7)}</span>
+            </td>
+            <td colSpan={5} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">13.</span>
+              <span>{getCourseName(13)}</span>
+            </td>
+            <td colSpan={2} className="border-b border-r border-black px-1 text-slate-800 text-[7.5px] align-middle">
+              Form 2
+            </td>
+            <td colSpan={1} className="border-b border-black text-center font-bold text-[8px] align-middle bg-white">
+              {formatDateForSheet(student.data_form2)}
+            </td>
+          </tr>
+
+          {/* LINHA 11: CURSOS 2, 8, 14 | DREAM DAY (Row 1) */}
+          <tr style={{ height: '4.4mm' }}>
+            <td colSpan={3} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">2.</span>
+              <span>{getCourseName(2)}</span>
+            </td>
+            <td colSpan={4} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">8.</span>
+              <span>{getCourseName(8)}</span>
+            </td>
+            <td colSpan={5} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">14.</span>
+              <span>{getCourseName(14)}</span>
+            </td>
+            <td colSpan={2} rowSpan={2} className="border-b border-r border-black px-1 text-slate-800 text-[7.5px] align-middle">
+              Dream Day
+            </td>
+            <td colSpan={1} rowSpan={2} className="border-b border-black text-center font-bold text-[8px] align-middle bg-white">
+              {formatDateForSheet(student.data_dream_day)}
+            </td>
+          </tr>
+
+          {/* LINHA 12: CURSOS 3, 9, 15 | DREAM DAY (Row 2) */}
+          <tr style={{ height: '4.4mm' }}>
+            <td colSpan={3} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">3.</span>
+              <span>{getCourseName(3)}</span>
+            </td>
+            <td colSpan={4} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">9.</span>
+              <span>{getCourseName(9)}</span>
+            </td>
+            <td colSpan={5} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">15.</span>
+              <span>{getCourseName(15)}</span>
+            </td>
+          </tr>
+
+          {/* LINHA 13: CURSOS 4, 10, 16 | FECHAMENTO 1 */}
+          <tr style={{ height: '4.4mm' }}>
+            <td colSpan={3} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">4.</span>
+              <span>{getCourseName(4)}</span>
+            </td>
+            <td colSpan={4} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">10.</span>
+              <span>{getCourseName(10)}</span>
+            </td>
+            <td colSpan={5} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">16.</span>
+              <span>{getCourseName(16)}</span>
+            </td>
+            <td colSpan={2} className="border-b border-r border-black px-1 text-slate-800 text-[7.5px] align-middle">
+              Fechamento 1
+            </td>
+            <td colSpan={1} className="border-b border-black text-center font-bold text-[8px] align-middle bg-white">
+              {formatDateForSheet(student.data_fechamento1)}
+            </td>
+          </tr>
+
+          {/* LINHA 14: CURSOS 5, 11, 17 | FECHAMENTO 2 */}
+          <tr style={{ height: '4.4mm' }}>
+            <td colSpan={3} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">5.</span>
+              <span>{getCourseName(5)}</span>
+            </td>
+            <td colSpan={4} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">11.</span>
+              <span>{getCourseName(11)}</span>
+            </td>
+            <td colSpan={5} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">17.</span>
+              <span>{getCourseName(17)}</span>
+            </td>
+            <td colSpan={2} className="border-b border-r border-black px-1 text-slate-800 text-[7.5px] align-middle">
+              Fechamento 2
+            </td>
+            <td colSpan={1} className="border-b border-black text-center font-bold text-[8px] align-middle bg-white">
+              {formatDateForSheet(student.data_fechamento2)}
+            </td>
+          </tr>
+
+          {/* LINHA 15: CURSOS 6, 12, 18 | FECHAMENTO 3 */}
+          <tr style={{ height: '4.4mm' }}>
+            <td colSpan={3} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">6.</span>
+              <span>{getCourseName(6)}</span>
+            </td>
+            <td colSpan={4} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">12.</span>
+              <span>{getCourseName(12)}</span>
+            </td>
+            <td colSpan={5} className="border-b border-r border-black px-1 truncate bg-white">
+              <span className="font-semibold text-slate-700 mr-1">18.</span>
+              <span>{getCourseName(18)}</span>
+            </td>
+            <td colSpan={2} className="border-b border-r border-black px-1 text-slate-800 text-[7.5px] align-middle">
+              Fechamento 3
+            </td>
+            <td colSpan={1} className="border-b border-black text-center font-bold text-[8px] align-middle bg-white">
+              {formatDateForSheet(student.data_fechamento3)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* ============================================================== */}
+      {/* 2. TABELA DE REGISTRO DE AULAS (Linhas 16 a 50 do Excel)        */}
+      {/* ============================================================== */}
+      <table
+        className="w-full border-collapse border-b border-l border-r border-black table-fixed text-[7.5px]"
+        style={{ width: '100%', borderSpacing: 0 }}
+      >
+        <colgroup>
+          <col style={{ width: '8.256%' }} />  {/* Data */}
+          <col style={{ width: '4.917%' }} />  {/* Horário */}
+          <col style={{ width: '12.430%' }} /> {/* Curso / Aula / Conteúdo (Col C) */}
+          <col style={{ width: '13.636%' }} /> {/* Curso / Aula / Conteúdo (Col D) */}
+          <col style={{ width: '5.009%' }} />  {/* Aula (Col E) */}
+          <col style={{ width: '5.751%' }} />  {/* Apostila (Col F) */}
+          <col style={{ width: '4.638%' }} />  {/* Teste 1 (Col G) */}
+          <col style={{ width: '5.195%' }} />  {/* Teste 2 (Col H) */}
+          <col style={{ width: '4.824%' }} />  {/* Teste 3 (Col I) */}
+          <col style={{ width: '3.432%' }} />  {/* Instrutor (Col J) */}
+          <col style={{ width: '1.855%' }} />  {/* Instrutor (Col K) */}
+          <col style={{ width: '6.122%' }} />  {/* Coord. (Col L) */}
+          <col style={{ width: '3.432%' }} />  {/* Assinatura do Aluno (Col M) */}
+          <col style={{ width: '2.690%' }} />  {/* Assinatura do Aluno (Col N) */}
+          <col style={{ width: '5.751%' }} />  {/* Assinatura do Aluno (Col O) */}
+          <col style={{ width: '12.059%' }} /> {/* Assinatura do Aluno (Col P) */}
+        </colgroup>
+
+        <thead>
+          {/* LINHA 16 DO EXCEL: CABEÇALHO SUPERIOR */}
+          <tr style={{ height: '4.2mm' }} className="bg-[#D9D9D9] text-[#0070C0] font-bold text-center">
+            <th rowSpan={2} className="border-b border-r border-black">Data</th>
+            <th rowSpan={2} className="border-b border-r border-black">Horário</th>
+            <th colSpan={2} rowSpan={2} className="border-b border-r border-black">Curso / Aula / Conteúdo</th>
+            <th colSpan={5} className="border-b border-r border-black">Estágio da Aula</th>
+            <th colSpan={2} rowSpan={2} className="border-b border-r border-black">Instrutor</th>
+            <th rowSpan={2} className="border-b border-r border-black">Coord.</th>
+            <th colSpan={4} rowSpan={2} className="border-b border-black">Assinatura do Aluno</th>
+          </tr>
+
+          {/* LINHA 17 DO EXCEL: SUBCOLUNAS DE ESTÁGIO DA AULA */}
+          <tr style={{ height: '3.8mm' }} className="bg-[#D9D9D9] text-[#0070C0] font-bold text-center text-[6.5px]">
+            <th className="border-b border-r border-black">Aula</th>
+            <th className="border-b border-r border-black">Apostila</th>
+            <th className="border-b border-r border-black">Teste 1</th>
+            <th className="border-b border-r border-black">Teste 2</th>
+            <th className="border-b border-r border-black">Teste 3</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {/* LINHAS 18 A 50 DO EXCEL: EXATAMENTE 33 LINHAS DE REGISTRO */}
+          {Array.from({ length: 33 }).map((_, i) => (
+            <tr
+              key={i}
+              style={{ height: '3.95mm' }}
+              className="border-b border-black/80 font-mono text-[7px] text-center bg-white"
+            >
+              <td className="border-r border-black/80 text-slate-400 font-mono tracking-tighter text-[6.5px]">
+                / &nbsp; /
+              </td>
+              <td className="border-r border-black/80 text-slate-400 font-mono text-[6.5px]">
+                &nbsp;h&nbsp;
+              </td>
+              <td colSpan={2} className="border-r border-black/80"></td>
+              <td className="border-r border-black/80"></td>
+              <td className="border-r border-black/80"></td>
+              <td className="border-r border-black/80"></td>
+              <td className="border-r border-black/80"></td>
+              <td className="border-r border-black/80"></td>
+              <td colSpan={2} className="border-r border-black/80"></td>
+              <td className="border-r border-black/80"></td>
+              <td colSpan={4}></td>
+            </tr>
           ))}
-        </div>
-      </div>
+        </tbody>
+      </table>
+
+      {/* ============================================================== */}
+      {/* 3. ANOTAÇÕES COMPLEMENTARES (Linhas 51 a 59 do Excel)           */}
+      {/* ============================================================== */}
+      <table
+        className="w-full border-collapse border-b border-l border-r border-black table-fixed text-[8px]"
+        style={{ width: '100%', borderSpacing: 0 }}
+      >
+        <tbody>
+          {/* Linha 51: Cabeçalho */}
+          <tr style={{ height: '4.2mm' }}>
+            <td className="bg-[#D9D9D9] border-b border-black text-center font-bold text-[#0070C0] uppercase">
+              Anotações complementares
+            </td>
+          </tr>
+          {/* Linhas 52 a 59: 8 Linhas pautadas em branco */}
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <tr key={idx} style={{ height: '3.9mm' }}>
+              <td className="border-b border-black bg-white"></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
