@@ -9,8 +9,7 @@ const repo = isGithubActions && repoName ? `/${repoName}` : '';
 const nextConfig: NextConfig = {
   output: 'export',
   trailingSlash: true,
-  basePath: repo,
-  assetPrefix: repo ? `${repo}/` : undefined,
+  basePath: repo || undefined,
   images: {
     unoptimized: true,
   },

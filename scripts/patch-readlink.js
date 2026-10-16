@@ -1,10 +1,15 @@
 const fs = require('fs');
-const path = require('path');
 
-// Ensure all child processes, workers, and subprocesses inherit this patch:
+// The EISDIR bug in libuv only affects Windows NTFS on Node 24+
+// On Linux/macOS (e.g. GitHub Actions ubuntu-latest), this patch is not needed and must not run.
+if (process.platform !== 'win32') {
+  return;
+}
+
+// Ensure all child processes, workers, and subprocesses on Windows inherit this patch:
 if (!process.env.NODE_OPTIONS || !process.env.NODE_OPTIONS.includes('patch-readlink.js')) {
   const normalizedPath = __filename.replace(/\\/g, '/');
-  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ''} --require "${normalizedPath}"`.trim();
+  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ''} -r ${normalizedPath}`.trim();
 }
 
 // Node 24 Windows libuv compatibility fix:
