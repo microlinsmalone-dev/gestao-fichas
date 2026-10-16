@@ -2,7 +2,7 @@
 // SISTEMA DE GESTÃO DE FICHAS PEDAGÓGICAS - MICROLINS
 // Component: components/print/sheet-frente.tsx
 // Ficha de Acompanhamento Individual do Aluno - Página 1 (Frente A4)
-// Réplica milimétrica 100% fiel ao ModeloFicha.xlsx do Excel
+// Réplica estrutural e milimétrica 100% fiel ao ModeloFicha.xlsx do Excel
 // ==============================================================================
 
 'use client';
@@ -89,18 +89,19 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
 
   return (
     <div
-      className="a4-sheet a4-frente bg-white text-black font-sans leading-tight border border-black box-border mx-auto select-none print:m-0 print:border-black"
+      className="a4-sheet a4-frente bg-white text-black leading-tight border border-black box-border mx-auto select-none print:m-0 print:border-black"
       style={{
         width: '200mm',
         height: '286mm',
         maxHeight: '286mm',
         overflow: 'hidden',
         fontSize: '8.5px',
+        fontFamily: "Calibri, 'Segoe UI', Arial, sans-serif",
       }}
     >
       {/* 1. TÍTULO PRINCIPAL + LOGO MICROLINS (Linha 1 do ModeloFicha.xlsx: A1:L1 e M1:P1) */}
       <div className="grid grid-cols-[76%_24%] border-b border-black h-[10.5mm]">
-        {/* Lado Esquerdo (A1:L1): Título em Azul com fundo cinza */}
+        {/* Lado Esquerdo (A1:L1): Título em Azul com fundo cinza claro #D9D9D9 */}
         <div className="bg-[#D9D9D9] border-r border-black flex items-center justify-center px-2">
           <h1 className="text-[14px] font-bold text-[#0070C0] tracking-wide text-center">
             Ficha de Acompanhamento Individual do Aluno
@@ -115,202 +116,211 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
             alt="Microlins"
             className="h-[5.5mm] w-auto object-contain mx-auto"
           />
-          <span className="text-[6.5px] text-slate-700 font-sans tracking-tight text-center leading-none mt-0.5">
+          <span className="text-[6.5px] text-slate-700 tracking-tight text-center leading-none mt-0.5">
             Gerado por aplicação. V1.0
           </span>
         </div>
       </div>
 
-      {/* 2. DADOS CADASTRAIS + DATAS DE INÍCIO E TÉRMINO (Linhas 2 a 5/6 do Excel) */}
-      <div className="grid grid-cols-[76%_24%] border-b border-black text-[8.5px]">
-        {/* Lado Esquerdo: Dados Pessoais */}
-        <div className="border-r border-black divide-y divide-black">
-          {/* Linha 2: Matrícula e Nome */}
-          <div className="grid grid-cols-[33%_67%] h-[4.8mm] items-center px-1.5 divide-x divide-black">
-            <div className="truncate pr-1">
-              <span className="text-slate-800">Matrícula: </span>
-              <span className="font-bold">{student.matricula || ''}</span>
-            </div>
-            <div className="truncate pl-1.5">
-              <span className="text-slate-800">Nome do Aluno: </span>
-              <span className="font-bold text-[9px] uppercase">{student.nome || ''}</span>
-            </div>
-          </div>
-
-          {/* Linha 3: Email */}
-          <div className="h-[4.8mm] flex items-center px-1.5 truncate">
-            <span className="text-slate-800 mr-1">Email: </span>
-            <span className="truncate">{student.email || ''}</span>
-          </div>
-
-          {/* Linha 4: Data de Nascimento e Instrutor */}
-          <div className="grid grid-cols-[38%_62%] h-[4.8mm] items-center px-1.5 divide-x divide-black">
-            <div className="truncate pr-1">
-              <span className="text-slate-800">Data Nascimento: </span>
-              <span>{formatDateForSheet(student.data_nascimento)}</span>
-            </div>
-            <div className="truncate pl-1.5">
-              <span className="text-slate-800">Instrutor: </span>
-              <span className="font-medium">{student.instrutor || ''}</span>
-            </div>
-          </div>
-
-          {/* Linha 5: Telefone */}
-          <div className="h-[4.8mm] flex items-center px-1.5 truncate">
-            <span className="text-slate-800 mr-1">Telefone: </span>
-            <span>{formatPhoneForSheet(student.telefone)}</span>
-          </div>
-        </div>
-
-        {/* Lado Direito: Início do Curso e Previsão de Término */}
-        <div className="grid grid-cols-2 divide-x divide-black text-center">
-          <div className="flex flex-col justify-between">
-            <div className="h-[8.5mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center p-1 text-[7.5px] leading-tight text-slate-800">
-              Data inicio do curso:
-            </div>
-            <div className="flex-1 flex items-center justify-center font-bold text-[9px] py-1 bg-white">
-              {formatDateForSheet(student.data_inicio_curso)}
-            </div>
-          </div>
-          <div className="flex flex-col justify-between">
-            <div className="h-[8.5mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center p-1 text-[7.5px] leading-tight text-slate-800">
-              Data prevista para término do curso:
-            </div>
-            <div className="flex-1 flex items-center justify-center font-bold text-[9px] py-1 bg-white">
-              {formatDateForSheet(student.data_termino_curso)}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. QUADRO DE HORÁRIOS & DIAS DA SEMANA (Linhas 6 a 8 do Excel) */}
-      <div className="border-b border-black text-[8px]">
-        {/* Linha 6: Dias da Semana (fundo branco com bordas, igual Excel) */}
-        <div className="grid grid-cols-[13%_repeat(7,_12.42%)] h-[4.4mm] items-center divide-x divide-black border-b border-black text-center bg-white">
-          <span className="text-left px-1 text-[7.5px] text-black">
-            Dia da semana:
-          </span>
-          {WEEKDAYS.map((w) => (
-            <span key={w} className="font-semibold text-slate-900 text-[8px] truncate px-0.5">
-              {w}
-            </span>
-          ))}
-        </div>
-
-        {/* Linha 7: Horário Inicial */}
-        <div className="grid grid-cols-[13%_repeat(7,_12.42%)] h-[4.4mm] items-center divide-x divide-black border-b border-black text-center bg-white">
-          <span className="text-left px-1 text-[7.5px] text-slate-800">
-            Horário inicial:
-          </span>
-          {WEEKDAYS.map((w) => {
-            const sch = getDaySchedule(w);
-            const isPlaceholder = sch.inicio === 'h' || !sch.inicio;
-            return (
-              <span
-                key={w}
-                className={`text-[8px] truncate ${
-                  isPlaceholder ? 'text-slate-400 font-mono' : 'font-bold text-slate-900'
-                }`}
-              >
-                {sch.inicio || 'h'}
-              </span>
-            );
-          })}
-        </div>
-
-        {/* Linha 8: Horário Final */}
-        <div className="grid grid-cols-[13%_repeat(7,_12.42%)] h-[4.4mm] items-center divide-x divide-black text-center bg-white">
-          <span className="text-left px-1 text-[7.5px] text-slate-800">
-            Horário final:
-          </span>
-          {WEEKDAYS.map((w) => {
-            const sch = getDaySchedule(w);
-            const isPlaceholder = sch.fim === 'h' || !sch.fim;
-            return (
-              <span
-                key={w}
-                className={`text-[8px] truncate ${
-                  isPlaceholder ? 'text-slate-400 font-mono' : 'font-bold text-slate-900'
-                }`}
-              >
-                {sch.fim || 'h'}
-              </span>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 4. CURSOS CONTRATADOS (18 SLOTS) + DE OLHO NA CARREIRA DO ALUNO (Linhas 9 a 15 do Excel) */}
+      {/* 2. CORPO INTERMEDIÁRIO DUAS COLUNAS PARALELAS (Linhas 2 a 15 do Excel) */}
       <div className="grid grid-cols-[76%_24%] border-b border-black">
-        {/* Bloco de Cursos (Esquerda: A9:L15) */}
+        {/* ============================================================== */}
+        {/* COLUNA ESQUERDA (Colunas A a L do Excel - 76% da largura)      */}
+        {/* Contém: Dados Pessoais (2-5) + Horários (6-8) + Cursos (9-15)  */}
+        {/* ============================================================== */}
         <div className="border-r border-black flex flex-col">
-          {/* Linha 9: Cabeçalho da Seção de Cursos */}
-          <div className="h-[4.4mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center font-bold text-[#0070C0] text-[8.5px]">
-            Cursos / Módulos Contratados:
+          {/* A) DADOS CADASTRAIS (Linhas 2 a 5 do Excel) */}
+          <div className="divide-y divide-black">
+            {/* Linha 2: Matrícula e Nome */}
+            <div className="grid grid-cols-[33%_67%] h-[4.6mm] items-center px-1.5 divide-x divide-black">
+              <div className="truncate pr-1">
+                <span className="text-slate-800">Matrícula: </span>
+                <span className="font-bold">{student.matricula || ''}</span>
+              </div>
+              <div className="truncate pl-1.5">
+                <span className="text-slate-800">Nome do Aluno: </span>
+                <span className="font-bold text-[9px] uppercase">{student.nome || ''}</span>
+              </div>
+            </div>
+
+            {/* Linha 3: Email */}
+            <div className="h-[4.6mm] flex items-center px-1.5 truncate">
+              <span className="text-slate-800 mr-1">Email: </span>
+              <span className="truncate">{student.email || ''}</span>
+            </div>
+
+            {/* Linha 4: Data de Nascimento e Instrutor */}
+            <div className="grid grid-cols-[38%_62%] h-[4.6mm] items-center px-1.5 divide-x divide-black">
+              <div className="truncate pr-1">
+                <span className="text-slate-800">Data Nascimento: </span>
+                <span>{formatDateForSheet(student.data_nascimento)}</span>
+              </div>
+              <div className="truncate pl-1.5">
+                <span className="text-slate-800">Instrutor: </span>
+                <span className="font-medium">{student.instrutor || ''}</span>
+              </div>
+            </div>
+
+            {/* Linha 5: Telefone */}
+            <div className="h-[4.6mm] flex items-center px-1.5 truncate">
+              <span className="text-slate-800 mr-1">Telefone: </span>
+              <span>{formatPhoneForSheet(student.telefone)}</span>
+            </div>
           </div>
 
-          {/* Linhas 10 a 15: Grade 3 Colunas x 6 Linhas de Cursos */}
-          <div className="grid grid-cols-3 divide-x divide-black flex-1 text-[8px]">
-            {courseMatrix.map((col, colIdx) => (
-              <div key={colIdx} className="divide-y divide-black">
-                {col.map((item) => (
-                  <div
-                    key={item.slotNumber}
-                    className="h-[4.4mm] px-1 flex items-center overflow-hidden bg-white"
+          {/* B) QUADRO DE HORÁRIOS & DIAS DA SEMANA (Linhas 6 a 8 do Excel) */}
+          <div className="border-t border-black text-[8px]">
+            {/* Linha 6: Dias da Semana */}
+            <div className="grid grid-cols-[14%_repeat(7,_12.28%)] h-[4.4mm] items-center divide-x divide-black border-b border-black text-center bg-white">
+              <span className="text-left px-1 text-[7px] text-slate-900 font-semibold">
+                Dia da semana:
+              </span>
+              {WEEKDAYS.map((w) => (
+                <span key={w} className="font-semibold text-slate-900 text-[7.5px] truncate px-0.5">
+                  {w}
+                </span>
+              ))}
+            </div>
+
+            {/* Linha 7: Horário Inicial */}
+            <div className="grid grid-cols-[14%_repeat(7,_12.28%)] h-[4.4mm] items-center divide-x divide-black border-b border-black text-center bg-white">
+              <span className="text-left px-1 text-[7px] text-slate-800">
+                Horário inicial:
+              </span>
+              {WEEKDAYS.map((w) => {
+                const sch = getDaySchedule(w);
+                const isPlaceholder = sch.inicio === 'h' || !sch.inicio;
+                return (
+                  <span
+                    key={w}
+                    className={`text-[7.5px] truncate ${
+                      isPlaceholder ? 'text-slate-400 font-mono' : 'font-bold text-slate-900'
+                    }`}
                   >
-                    <span className="font-semibold text-slate-700 mr-1 shrink-0">
-                      {item.slotNumber}.
-                    </span>
-                    <span
-                      className="truncate font-medium text-slate-900 text-[7.5px]"
-                      title={item.name}
+                    {sch.inicio || 'h'}
+                  </span>
+                );
+              })}
+            </div>
+
+            {/* Linha 8: Horário Final */}
+            <div className="grid grid-cols-[14%_repeat(7,_12.28%)] h-[4.4mm] items-center divide-x divide-black border-b border-black text-center bg-white">
+              <span className="text-left px-1 text-[7px] text-slate-800">
+                Horário final:
+              </span>
+              {WEEKDAYS.map((w) => {
+                const sch = getDaySchedule(w);
+                const isPlaceholder = sch.fim === 'h' || !sch.fim;
+                return (
+                  <span
+                    key={w}
+                    className={`text-[7.5px] truncate ${
+                      isPlaceholder ? 'text-slate-400 font-mono' : 'font-bold text-slate-900'
+                    }`}
+                  >
+                    {sch.fim || 'h'}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* C) CURSOS CONTRATADOS (Linhas 9 a 15 do Excel - 18 Slots) */}
+          <div className="flex flex-col flex-1">
+            {/* Linha 9: Cabeçalho da Seção de Cursos */}
+            <div className="h-[4.4mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center font-bold text-[#0070C0] text-[8px]">
+              Cursos / Módulos Contratados:
+            </div>
+
+            {/* Linhas 10 a 15: Grade 3 Colunas x 6 Linhas de Cursos */}
+            <div className="grid grid-cols-3 divide-x divide-black flex-1 text-[8px]">
+              {courseMatrix.map((col, colIdx) => (
+                <div key={colIdx} className="divide-y divide-black">
+                  {col.map((item) => (
+                    <div
+                      key={item.slotNumber}
+                      className="h-[4.4mm] px-1 flex items-center overflow-hidden bg-white"
                     >
-                      {item.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ))}
+                      <span className="font-semibold text-slate-700 mr-1 shrink-0">
+                        {item.slotNumber}.
+                      </span>
+                      <span
+                        className="truncate font-medium text-slate-900 text-[7.5px]"
+                        title={item.name}
+                      >
+                        {item.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Bloco de Marcos Pedagógicos (Direita: M7:P15) */}
-        <div className="grid grid-cols-[16%_84%] divide-x divide-black text-[7.5px]">
-          {/* Faixa Lateral Vertical (M7:M15): "De olho na carreira do aluno" */}
-          <div className="bg-[#D9D9D9] flex items-center justify-center p-0.5 font-bold text-[#0070C0] text-center select-none overflow-hidden">
-            <span
-              className="inline-block transform -rotate-90 whitespace-nowrap text-[7.5px] font-bold tracking-tight"
-              style={{ transformOrigin: 'center center' }}
-            >
-              De olho na carreira do aluno
-            </span>
+        {/* ============================================================== */}
+        {/* COLUNA DIREITA (Colunas M a P do Excel - 24% da largura)       */}
+        {/* Contém: Início/Término (2-6) + De olho na carreira (7-15)      */}
+        {/* ============================================================== */}
+        <div className="flex flex-col">
+          {/* A) DATAS DE INÍCIO E TÉRMINO DO CURSO (Linhas 2 a 6 do Excel) */}
+          <div className="grid grid-cols-2 divide-x divide-black border-b border-black text-center h-[23.0mm]">
+            <div className="flex flex-col justify-between">
+              <div className="h-[14.5mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center p-1 text-[7.5px] leading-tight text-slate-800 font-semibold">
+                Data inicio do curso:
+              </div>
+              <div className="flex-1 flex items-center justify-center font-bold text-[9px] py-1 bg-white">
+                {formatDateForSheet(student.data_inicio_curso)}
+              </div>
+            </div>
+            <div className="flex flex-col justify-between">
+              <div className="h-[14.5mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center p-1 text-[7.5px] leading-tight text-slate-800 font-semibold">
+                Data prevista para término do curso:
+              </div>
+              <div className="flex-1 flex items-center justify-center font-bold text-[9px] py-1 bg-white">
+                {formatDateForSheet(student.data_termino_curso)}
+              </div>
+            </div>
           </div>
 
-          {/* Tabela de 7 Marcos Pedagógicos */}
-          <div className="flex flex-col divide-y divide-black justify-between text-[7.5px]">
-            {milestones.map((m, idx) => (
-              <div
-                key={idx}
-                className={`grid grid-cols-[55%_45%] divide-x divide-black items-center ${
-                  m.doubleRow ? 'h-[4.8mm]' : 'h-[3.9mm]'
-                } bg-white`}
+          {/* B) DE OLHO NA CARREIRA DO ALUNO + 7 MARCOS (Linhas 7 a 15 do Excel) */}
+          <div className="grid grid-cols-[16%_84%] divide-x divide-black flex-1 text-[7.5px]">
+            {/* Faixa Lateral Vertical (M7:M15): "De olho na carreira do aluno" */}
+            <div className="bg-[#D9D9D9] flex items-center justify-center p-0.5 font-bold text-[#0070C0] text-center select-none overflow-hidden">
+              <span
+                className="inline-block transform -rotate-90 whitespace-nowrap text-[7.5px] font-bold tracking-tight"
+                style={{ transformOrigin: 'center center' }}
               >
-                <div className="px-1 text-slate-800 truncate">{m.label}</div>
-                <div className="px-1 text-center font-bold text-slate-900 truncate">
-                  {m.date}
+                De olho na carreira do aluno
+              </span>
+            </div>
+
+            {/* Tabela de 7 Marcos Pedagógicos (N7:P15) */}
+            <div className="flex flex-col divide-y divide-black justify-between text-[7.5px]">
+              {milestones.map((m, idx) => (
+                <div
+                  key={idx}
+                  className={`grid grid-cols-[55%_45%] divide-x divide-black items-center ${
+                    m.doubleRow ? 'h-[5.8mm]' : 'h-[4.4mm]'
+                  } bg-white`}
+                >
+                  <div className="px-1 text-slate-800 truncate">{m.label}</div>
+                  <div className="px-1 text-center font-bold text-slate-900 truncate">
+                    {m.date}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 5. TABELA DE REGISTRO DE AULAS (33 LINHAS - Linhas 16 a 50 do Excel) */}
+      {/* 3. TABELA DE REGISTRO DE AULAS (33 LINHAS - Linhas 16 a 50 do Excel) */}
       <div className="border-b border-black">
-        {/* Cabeçalho da Tabela de Frequência / Estágio */}
+        {/* Cabeçalho Composto da Tabela de Frequência / Estágio */}
         <div className="bg-[#D9D9D9] border-b border-black text-[#0070C0] font-bold text-center text-[7.5px]">
           {/* Linha 16: Linha Superior do Cabeçalho */}
-          <div className="grid grid-cols-[8%_5.5%_26%_26%_6%_6%_22.5%] divide-x divide-black h-[4.2mm] items-center">
+          <div className="grid grid-cols-[8.26%_4.92%_26.07%_25.42%_5.28%_6.12%_23.93%] divide-x divide-black h-[4.2mm] items-center">
             <div className="row-span-2">Data</div>
             <div className="row-span-2">Horário</div>
             <div className="row-span-2">Curso / Aula / Conteúdo</div>
@@ -320,7 +330,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
             <div className="row-span-2">Assinatura do Aluno</div>
           </div>
           {/* Linha 17: Subcolunas de Estágio da Aula (Nomes integrais idênticos ao Excel) */}
-          <div className="grid grid-cols-[8%_5.5%_26%_26%_6%_6%_22.5%] divide-x divide-black h-[3.8mm] items-center border-t border-black text-[7px] text-[#0070C0]">
+          <div className="grid grid-cols-[8.26%_4.92%_26.07%_25.42%_5.28%_6.12%_23.93%] divide-x divide-black h-[3.8mm] items-center border-t border-black text-[7px] text-[#0070C0]">
             <div></div>
             <div></div>
             <div></div>
@@ -342,7 +352,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
           {Array.from({ length: 33 }).map((_, i) => (
             <div
               key={i}
-              className="grid grid-cols-[8%_5.5%_26%_26%_6%_6%_22.5%] divide-x divide-black/80 h-[3.95mm] items-center text-center bg-white"
+              className="grid grid-cols-[8.26%_4.92%_26.07%_25.42%_5.28%_6.12%_23.93%] divide-x divide-black/80 h-[3.95mm] items-center text-center bg-white"
             >
               <div className="text-slate-400 font-mono tracking-tighter text-[6.5px]">
                 / &nbsp; /
@@ -366,7 +376,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
         </div>
       </div>
 
-      {/* 6. ANOTAÇÕES COMPLEMENTARES (Linhas 51 a 59 do Excel - 8 Linhas Pautadas) */}
+      {/* 4. ANOTAÇÕES COMPLEMENTARES (Linhas 51 a 59 do Excel - 8 Linhas Pautadas) */}
       <div className="flex flex-col">
         {/* Linha 51: Cabeçalho */}
         <div className="h-[4.2mm] bg-[#D9D9D9] border-b border-black flex items-center justify-center font-bold text-[#0070C0] text-[8px]">
