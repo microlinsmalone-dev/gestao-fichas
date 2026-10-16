@@ -1,0 +1,26 @@
+# Dependências
+node_modules/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Variáveis de ambiente locais
+.env*.local
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Artefatos internos da equipe de agentes / scripts de migração gerados
+.agents/
+supabase/migration_payload.json
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
