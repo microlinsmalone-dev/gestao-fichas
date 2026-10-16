@@ -2,6 +2,7 @@
 // SISTEMA DE GESTÃO DE FICHAS PEDAGÓGICAS - MICROLINS
 // Page: app/imprimir/page.tsx
 // Motor de visualização e emissão em massa de fichas A4 (Frente e Verso)
+// Suporte nativo ao motor do Excel (Excel.Application COM) via background service
 // ==============================================================================
 
 'use client';
@@ -19,12 +20,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Sparkles,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useStudents } from '../../lib/hooks/use-students';
 import { SheetFrente } from '../../components/print/sheet-frente';
 import { SheetVerso } from '../../components/print/sheet-verso';
 import { ScheduleDialog } from '../../components/print/schedule-dialog';
+import { checkExcelBridge, printViaExcel, type BridgeStatus } from '../../lib/services/excel-bridge-service';
 import type { StudentWithCourses, ScheduleConfig } from '../../types/database';
 
 function ImprimirContent() {
@@ -57,6 +59,9 @@ function ImprimirContent() {
   });
 
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>({ online: false });
+  const [isPrintingExcel, setIsPrintingExcel] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Recupera horários configurados vindos da página anterior
   useEffect(() => {
@@ -73,14 +78,59 @@ function ImprimirContent() {
     }
   }, []);
 
+  // Verifica status da Bridge do Excel automaticamente em background
+  useEffect(() => {
+    let isMounted = true;
+    checkExcelBridge().then((status) => {
+      if (isMounted) {
+        setBridgeStatus(status);
+      }
+    });
+
+    const interval = setInterval(() => {
+      checkExcelBridge().then((status) => {
+        if (isMounted) {
+          setBridgeStatus(status);
+        }
+      });
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   // Calcula total de páginas do lote
   const includeVerso = scheduleConfig.includeVerso ?? true;
   const totalPages = selectedStudents.length * (includeVerso ? 2 : 1);
 
-  // Manipulador de impressão nativa
+  // Manipulador de impressão nativa via navegador
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
       window.print();
+    }
+  };
+
+  // Disparo direto pelo motor do Excel
+  const handlePrintExcel = async () => {
+    setIsPrintingExcel(true);
+    setActionFeedback(null);
+
+    try {
+      const result = await printViaExcel(selectedStudents, scheduleConfig, includeVerso);
+      setActionFeedback({
+        type: 'success',
+        message: result.message,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setActionFeedback({
+        type: 'error',
+        message: msg,
+      });
+    } finally {
+      setIsPrintingExcel(false);
     }
   };
 
@@ -137,16 +187,24 @@ function ImprimirContent() {
               <ArrowLeft className="w-4 h-4" />
             </Link>
             <div>
-              <h1 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>Impressão de Fichas Pedagógicas</span>
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm sm:text-base font-bold text-slate-900">
+                  Impressão de Fichas Pedagógicas
+                </h1>
                 <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-[#0f3b7d] border border-blue-200/60">
                   {selectedStudents.length} aluno(s)
                 </span>
                 <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                   {totalPages} pág. A4
                 </span>
-              </h1>
-              <p className="text-[11px] text-slate-500 hidden sm:block">
+                {bridgeStatus.online && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Assistente local do Excel ativo">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Motor Excel Ativo
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 hidden sm:block mt-0.5">
                 Dias:{' '}
                 {scheduleConfig.diasSemana.length > 0
                   ? scheduleConfig.diasSemana.map((d) => d.replace('-feira', '')).join(', ')
@@ -187,16 +245,73 @@ function ImprimirContent() {
               <span>{includeVerso ? 'Verso Ativo' : 'Apenas Frente'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f3b7d] hover:bg-[#0a2e68] transition-all shadow-sm active:scale-95"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir Agora</span>
-            </button>
+            {/* BOTÃO NATIVO EXCEL (Quando o motor estiver ativo no computador) */}
+            {bridgeStatus.online ? (
+              <button
+                type="button"
+                onClick={handlePrintExcel}
+                disabled={isPrintingExcel}
+                className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition-all shadow-sm active:scale-95 disabled:opacity-60"
+                title="Dispara a impressão diretamente no Microsoft Excel local via COM para a impressora padrão"
+              >
+                {isPrintingExcel ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Printer className="w-4 h-4" />
+                )}
+                <span>Imprimir com Excel</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f3b7d] hover:bg-[#0a2e68] transition-all shadow-sm active:scale-95"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Imprimir Agora</span>
+              </button>
+            )}
+
+            {bridgeStatus.online && (
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-all shadow-2xs"
+                title="Imprimir visualização pelo navegador (Chrome/Edge)"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-slate-500" />
+                <span>Navegador</span>
+              </button>
+            )}
           </div>
         </div>
+
+        {/* FEEDBACK DE DISPARO */}
+        {actionFeedback && (
+          <div
+            className={`max-w-7xl mx-auto mt-2.5 p-3 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
+              actionFeedback.type === 'success'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {actionFeedback.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              )}
+              <span>{actionFeedback.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActionFeedback(null)}
+              className="text-slate-400 hover:text-slate-600 ml-4 font-bold text-sm"
+            >
+              ×
+            </button>
+          </div>
+        )}
       </header>
 
       {/* ÁREA DE RENDERIZAÇÃO DAS PÁGINAS A4 */}

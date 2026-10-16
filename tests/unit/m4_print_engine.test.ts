@@ -150,4 +150,13 @@ describe('Milestone 4: Sheet Geometry & Structure Specifications', () => {
     expect(batchSchedule.diasSemana).toContain('Quarta-feira');
     expect(batchSchedule.includeVerso).toBe(true);
   });
+
+  it('verifica comunicação com o serviço local do Excel', async () => {
+    const { checkExcelBridge } = await import('../../lib/services/excel-bridge-service');
+    const status = await checkExcelBridge();
+    // No ambiente de testes ou CI onde a porta pode ou não estar ouvindo:
+    expect(status).toHaveProperty('online');
+    expect(typeof status.online).toBe('boolean');
+  });
 });
+
