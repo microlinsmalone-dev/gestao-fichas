@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "node -r ./scripts/patch-readlink.js ./node_modules/next/dist/bin/next dev",
-    "build": "node -r ./scripts/patch-readlink.js ./node_modules/next/dist/bin/next build",
+    "build": "next build",
+    "build:win": "node -r ./scripts/patch-readlink.js ./node_modules/next/dist/bin/next build",
     "start": "node -r ./scripts/patch-readlink.js ./node_modules/next/dist/bin/next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

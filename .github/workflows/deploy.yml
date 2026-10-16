@@ -25,13 +25,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps
 
       - name: Type check
         run: npx tsc --noEmit
@@ -39,23 +38,11 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Build static export (Next.js)
-        run: |
-          npx next build > build.log 2>&1 || BUILD_FAILED=1
-          echo "## Next.js Build Output" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          cat build.log >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ "$BUILD_FAILED" = "1" ]; then
-            exit 1
-          fi
+      - name: Build with Next.js
+        run: npm run build
         env:
-          # Opcionais: se não configurados, o cliente usa o projeto Supabase padrão do Gestão de Apostilas
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://apfcbkucxjcleqxarlmv.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_DZAXwbvMzgz31wR-pmbNkg_aNg3ofG0' }}
-
-      - name: Disable Jekyll processing
-        run: touch ./out/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

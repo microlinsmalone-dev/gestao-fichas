@@ -1,15 +1,16 @@
 import type { NextConfig } from 'next';
 
 // Detecta automaticamente o nome do repositório no GitHub Actions para o GitHub Pages
-const isGithubActions = Boolean(process.env.GITHUB_ACTIONS);
-const rawRepo = process.env.GITHUB_REPOSITORY;
-const repoName = rawRepo ? (rawRepo.includes('/') ? rawRepo.split('/')[1] : rawRepo) : '';
-const repo = isGithubActions && repoName ? `/${repoName}` : '';
+const isGithubActions = process.env.GITHUB_ACTIONS || false;
+const repo = isGithubActions && process.env.GITHUB_REPOSITORY
+  ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}`
+  : '';
 
 const nextConfig: NextConfig = {
   output: 'export',
   trailingSlash: true,
-  basePath: repo || undefined,
+  basePath: repo,
+  assetPrefix: repo ? `${repo}/` : undefined,
   images: {
     unoptimized: true,
   },
