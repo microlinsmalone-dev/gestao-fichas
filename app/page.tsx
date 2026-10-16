@@ -92,10 +92,6 @@ export default function DashboardPage() {
   // Contadores para os KPI cards
   const totalStudents = students.length || 280;
   const totalCourses = catalogCourses.length || 105;
-  const totalEnrollments = useMemo(() => {
-    if (students.length === 0) return 717;
-    return students.reduce((acc, s) => acc + (s.cursos?.length || 0), 0);
-  }, [students]);
 
   // Manipuladores de Seleção
   const handleToggleSelect = useCallback((id: number) => {
@@ -243,7 +239,7 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Cards de Métricas e KPIs do Sistema */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* KPI 1: Alunos Cadastrados */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 transition-all hover:shadow-sm">
           <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#0f3b7d] flex items-center justify-center font-bold shrink-0">
@@ -277,23 +273,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* KPI 3: Vínculos Aluno-Curso */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
-            <Calendar className="w-6 h-6" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-slate-500">Matrículas Ativas</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-0.5">
-              {studentsLoading ? '...' : totalEnrollments}
-            </h3>
-            <span className="text-[11px] text-amber-600 font-medium">
-              Vínculos Aluno-Curso
-            </span>
-          </div>
-        </div>
-
-        {/* KPI 4: Status do Banco */}
+        {/* KPI 3: Status do Banco */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 transition-all hover:shadow-sm">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
             <CheckCircle2 className="w-6 h-6" />

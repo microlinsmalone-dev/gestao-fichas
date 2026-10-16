@@ -58,6 +58,21 @@ function ImprimirContent() {
 
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
 
+  // Recupera horários configurados vindos da página anterior
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('microlins_schedule_config');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setScheduleConfig((prev) => ({ ...prev, ...parsed }));
+        } catch {
+          // ignora json inválido
+        }
+      }
+    }
+  }, []);
+
   // Calcula total de páginas do lote
   const includeVerso = scheduleConfig.includeVerso ?? true;
   const totalPages = selectedStudents.length * (includeVerso ? 2 : 1);

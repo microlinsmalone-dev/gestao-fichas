@@ -12,7 +12,6 @@ import {
   BookOpen,
   ArrowLeft,
   Search,
-  Users,
   CheckCircle2,
   Plus,
   Loader2,
@@ -20,32 +19,18 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { useCourses } from '../../lib/hooks/use-courses';
-import { useStudents } from '../../lib/hooks/use-students';
 import { useDialog } from '../../components/ui/dialog';
 import { supabase } from '../../lib/supabase/client';
 import { normalizeText } from '../../lib/utils/excel-utils';
 
 export default function CursosPage() {
-  const { courses, loading: loadingCourses, refresh: refreshCourses } = useCourses();
-  const { students, loading: loadingStudents } = useStudents();
+  const { courses, loading, refresh: refreshCourses } = useCourses();
   const { showToast, showAlert } = useDialog();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [newCourseName, setNewCourseName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Mapeia quantidade de alunos matriculados em cada curso
-  const studentCountByCourse = useMemo(() => {
-    const map = new Map<string, number>();
-    students.forEach((student) => {
-      (student.cursos || []).forEach((c) => {
-        const key = normalizeText(c.nome);
-        map.set(key, (map.get(key) || 0) + 1);
-      });
-    });
-    return map;
-  }, [students]);
 
   // Filtra cursos pela busca
   const filteredCourses = useMemo(() => {
@@ -85,8 +70,6 @@ export default function CursosPage() {
       setSubmitting(false);
     }
   };
-
-  const loading = loadingCourses || loadingStudents;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -200,7 +183,6 @@ export default function CursosPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCourses.map((curso, idx) => {
-            const count = studentCountByCourse.get(normalizeText(curso.nome)) || 0;
             return (
               <div
                 key={curso.id}
@@ -221,11 +203,7 @@ export default function CursosPage() {
                   </h3>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                  <span className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-[#0f3b7d]" />
-                    <span>{count} aluno(s) vinculados</span>
-                  </span>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end text-[11px] text-slate-500">
                   <Link
                     href={`/?busca=${encodeURIComponent(curso.nome)}`}
                     className="text-[#0f3b7d] font-semibold hover:underline"

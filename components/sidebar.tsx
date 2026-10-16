@@ -14,28 +14,24 @@ import {
 
 export const navigationItems = [
   {
-    label: 'Fichas Pedagógicas',
+    label: 'Fichas',
     href: '/',
     icon: FileText,
-    description: 'Gestão cadastral e ciclo pedagógico',
   },
   {
     label: 'Impressão em Massa',
     href: '/imprimir',
     icon: Printer,
-    description: 'Emissão A4 Frente e Verso em lote',
   },
   {
     label: 'Catálogo de Cursos',
     href: '/cursos',
     icon: BookOpen,
-    description: '105 cursos e módulos pedagógicos',
   },
   {
     label: 'Importar / Exportar',
     href: '/excel',
     icon: FileSpreadsheet,
-    description: 'Integração com planilhas Excel',
   },
 ];
 
@@ -52,7 +48,7 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="font-bold text-base tracking-wide text-white">Microlins</h1>
-            <p className="text-xs text-slate-400 font-medium">Fichas Pedagógicas</p>
+            <p className="text-xs text-slate-400 font-medium">Sistema de Fichas</p>
           </div>
         </div>
         <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[#d91a2a]/20 text-red-300 border border-red-500/30">
@@ -76,27 +72,18 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-start gap-3 px-3 py-3 rounded-xl text-sm transition-all duration-150 ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 ${
                 isActive
                   ? 'bg-[#0f3b7d] text-white shadow-md font-semibold'
                   : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
               }`}
             >
               <Icon
-                className={`w-5 h-5 shrink-0 mt-0.5 ${
+                className={`w-5 h-5 shrink-0 ${
                   isActive ? 'text-white' : 'text-slate-400'
                 }`}
               />
-              <div className="flex-1 min-w-0">
-                <div className="leading-tight">{item.label}</div>
-                <div
-                  className={`text-[11px] mt-0.5 truncate ${
-                    isActive ? 'text-blue-200' : 'text-slate-400'
-                  }`}
-                >
-                  {item.description}
-                </div>
-              </div>
+              <span className="leading-tight">{item.label}</span>
             </Link>
           );
         })}

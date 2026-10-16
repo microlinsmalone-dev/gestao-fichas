@@ -32,9 +32,6 @@ export function Header() {
               <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 {currentItem.label}
               </h2>
-              <p className="text-xs text-slate-500 hidden sm:block">
-                {currentItem.description}
-              </p>
             </div>
           </div>
 

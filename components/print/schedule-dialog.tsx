@@ -1,7 +1,7 @@
 // ==============================================================================
 // SISTEMA DE GESTÃO DE FICHAS PEDAGÓGICAS - MICROLINS
 // Component: components/print/schedule-dialog.tsx
-// Diálogo de configuração de horários e dias da semana pré-impressão
+// Quadro de horários da ficha com preenchimento manual por dia da semana
 // ==============================================================================
 
 'use client';
@@ -13,7 +13,7 @@ import {
   Printer,
   X,
   FileCheck,
-  Check,
+  RotateCcw,
   Sparkles,
 } from 'lucide-react';
 import { formatTime } from '../../lib/utils/date-utils';
@@ -31,57 +31,10 @@ export const WEEKDAYS = [
 
 export type WeekdayName = (typeof WEEKDAYS)[number];
 
-interface SchedulePreset {
-  label: string;
-  days: WeekdayName[];
+export interface DaySchedule {
   inicio: string;
   fim: string;
 }
-
-const PRESETS: SchedulePreset[] = [
-  {
-    label: 'Tarde (14h às 16h) - Seg/Qua',
-    days: ['Segunda-feira', 'Quarta-feira'],
-    inicio: '14h00',
-    fim: '16h00',
-  },
-  {
-    label: 'Tarde (16h às 18h) - Seg/Qua',
-    days: ['Segunda-feira', 'Quarta-feira'],
-    inicio: '16h00',
-    fim: '18h00',
-  },
-  {
-    label: 'Manhã (08h às 10h) - Ter/Qui',
-    days: ['Terça-feira', 'Quinta-feira'],
-    inicio: '08h00',
-    fim: '10h00',
-  },
-  {
-    label: 'Manhã (10h às 12h) - Ter/Qui',
-    days: ['Terça-feira', 'Quinta-feira'],
-    inicio: '10h00',
-    fim: '12h00',
-  },
-  {
-    label: 'Noite (19h às 21h) - Ter/Qui',
-    days: ['Terça-feira', 'Quinta-feira'],
-    inicio: '19h00',
-    fim: '21h00',
-  },
-  {
-    label: 'Sábado Manhã (08h às 12h)',
-    days: ['Sábado'],
-    inicio: '08h00',
-    fim: '12h00',
-  },
-  {
-    label: 'Sábado Tarde (13h às 17h)',
-    days: ['Sábado'],
-    inicio: '13h00',
-    fim: '17h00',
-  },
-];
 
 export interface ScheduleDialogProps {
   isOpen: boolean;
@@ -91,6 +44,16 @@ export interface ScheduleDialogProps {
   selectedStudentsCount?: number;
 }
 
+const DEFAULT_DAYS_STATE: Record<WeekdayName, DaySchedule> = {
+  'Segunda-feira': { inicio: '', fim: '' },
+  'Terça-feira': { inicio: '', fim: '' },
+  'Quarta-feira': { inicio: '', fim: '' },
+  'Quinta-feira': { inicio: '', fim: '' },
+  'Sexta-feira': { inicio: '', fim: '' },
+  'Sábado': { inicio: '', fim: '' },
+  'Domingo': { inicio: '', fim: '' },
+};
+
 export function ScheduleDialog({
   isOpen,
   onClose,
@@ -98,60 +61,119 @@ export function ScheduleDialog({
   initialConfig,
   selectedStudentsCount,
 }: ScheduleDialogProps) {
-  const [selectedDays, setSelectedDays] = useState<string[]>(
-    initialConfig?.diasSemana || ['Segunda-feira', 'Quarta-feira']
-  );
-  const [horarioInicio, setHorarioInicio] = useState<string>(
-    initialConfig?.horarioInicio || '14h00'
-  );
-  const [horarioFim, setHorarioFim] = useState<string>(
-    initialConfig?.horarioFim || '16h00'
-  );
+  const [diasHorarios, setDiasHorarios] = useState<Record<WeekdayName, DaySchedule>>(() => ({
+    ...DEFAULT_DAYS_STATE,
+    'Segunda-feira': { inicio: '14h00', fim: '16h00' },
+    'Quarta-feira': { inicio: '14h00', fim: '16h00' },
+  }));
+
   const [includeVerso, setIncludeVerso] = useState<boolean>(
     initialConfig?.includeVerso ?? true
   );
 
-  // Sincroniza quando reabrir com novas props
+  // Sincroniza estado quando o modal abre com initialConfig
   useEffect(() => {
-    if (isOpen) {
-      if (initialConfig?.diasSemana !== undefined) {
-        setSelectedDays(initialConfig.diasSemana);
+    if (!isOpen) return;
+
+    if (initialConfig?.includeVerso !== undefined) {
+      setIncludeVerso(initialConfig.includeVerso);
+    }
+
+    if (initialConfig?.diasConfig && Object.keys(initialConfig.diasConfig).length > 0) {
+      const next: Record<WeekdayName, DaySchedule> = { ...DEFAULT_DAYS_STATE };
+      for (const d of WEEKDAYS) {
+        if (initialConfig.diasConfig[d]) {
+          next[d] = {
+            inicio: initialConfig.diasConfig[d].inicio || '',
+            fim: initialConfig.diasConfig[d].fim || '',
+          };
+        }
       }
-      if (initialConfig?.horarioInicio !== undefined) {
-        setHorarioInicio(initialConfig.horarioInicio);
+      setDiasHorarios(next);
+    } else if (initialConfig?.diasSemana && initialConfig.diasSemana.length > 0) {
+      const next: Record<WeekdayName, DaySchedule> = { ...DEFAULT_DAYS_STATE };
+      const defaultInicio = initialConfig.horarioInicio || '14h00';
+      const defaultFim = initialConfig.horarioFim || '16h00';
+      for (const d of initialConfig.diasSemana) {
+        if (d in next) {
+          next[d as WeekdayName] = {
+            inicio: defaultInicio,
+            fim: defaultFim,
+          };
+        }
       }
-      if (initialConfig?.horarioFim !== undefined) {
-        setHorarioFim(initialConfig.horarioFim);
-      }
-      if (initialConfig?.includeVerso !== undefined) {
-        setIncludeVerso(initialConfig.includeVerso);
-      }
+      setDiasHorarios(next);
     }
   }, [isOpen, initialConfig]);
 
   if (!isOpen) return null;
 
-  const toggleDay = (day: string) => {
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
+  const handleTimeChange = (dia: WeekdayName, field: 'inicio' | 'fim', value: string) => {
+    setDiasHorarios((prev) => ({
+      ...prev,
+      [dia]: {
+        ...prev[dia],
+        [field]: value,
+      },
+    }));
   };
 
-  const applyPreset = (preset: SchedulePreset) => {
-    setSelectedDays(preset.days);
-    setHorarioInicio(preset.inicio);
-    setHorarioFim(preset.fim);
+  const handleTimeBlur = (dia: WeekdayName, field: 'inicio' | 'fim') => {
+    setDiasHorarios((prev) => {
+      const current = prev[dia][field];
+      return {
+        ...prev,
+        [dia]: {
+          ...prev[dia],
+          [field]: formatTime(current),
+        },
+      };
+    });
+  };
+
+  const handleClearDay = (dia: WeekdayName) => {
+    setDiasHorarios((prev) => ({
+      ...prev,
+      [dia]: { inicio: '', fim: '' },
+    }));
+  };
+
+  const handleClearAll = () => {
+    setDiasHorarios({ ...DEFAULT_DAYS_STATE });
+  };
+
+  const handleQuickFillSegQua = () => {
+    setDiasHorarios((prev) => ({
+      ...prev,
+      'Segunda-feira': { inicio: '14h00', fim: '16h00' },
+      'Quarta-feira': { inicio: '14h00', fim: '16h00' },
+    }));
   };
 
   const handleConfirm = () => {
-    const formattedInicio = formatTime(horarioInicio);
-    const formattedFim = formatTime(horarioFim);
+    const diasConfig: Record<string, { inicio: string; fim: string }> = {};
+    const activeDays: string[] = [];
+
+    for (const dia of WEEKDAYS) {
+      const ini = formatTime(diasHorarios[dia].inicio);
+      const fim = formatTime(diasHorarios[dia].fim);
+
+      if (ini || fim) {
+        diasConfig[dia] = { inicio: ini, fim: fim };
+        activeDays.push(dia);
+      }
+    }
+
+    const firstActiveDay = activeDays.length > 0 ? diasConfig[activeDays[0]] : null;
+    const fallbackInicio = firstActiveDay ? firstActiveDay.inicio : '';
+    const fallbackFim = firstActiveDay ? firstActiveDay.fim : '';
 
     const config: ScheduleConfig = {
-      horarioInicio: formattedInicio,
-      horarioFim: formattedFim,
-      diasSemana: selectedDays,
+      horarioInicio: fallbackInicio,
+      horarioFim: fallbackFim,
+      diasSemana: activeDays,
       includeVerso,
+      diasConfig,
     };
 
     onConfirm(config);
@@ -159,7 +181,7 @@ export function ScheduleDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="px-6 py-4 bg-linear-to-r from-[#0f3b7d] to-[#1e54a4] text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -167,11 +189,11 @@ export function ScheduleDialog({
               <Calendar className="w-5 h-5 text-blue-200" />
             </div>
             <div>
-              <h2 className="text-base font-bold">Configuração de Horários da Ficha</h2>
+              <h2 className="text-base font-bold">Quadro de Horários da Ficha</h2>
               <p className="text-xs text-blue-200">
                 {selectedStudentsCount !== undefined
-                  ? `Aplicar para ${selectedStudentsCount} aluno(s) selecionado(s)`
-                  : 'Defina os dias e horários para impressão'}
+                  ? `Preencha os horários para ${selectedStudentsCount} aluno(s) selecionado(s)`
+                  : 'Preencha os horários para cada dia da semana (Ex: 14h00 às 16h00)'}
               </p>
             </div>
           </div>
@@ -186,108 +208,118 @@ export function ScheduleDialog({
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-6 text-sm text-slate-700">
-          {/* Presets Rápidos */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              Preenchimento Rápido (Turmas Frequentes)
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {PRESETS.map((p, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => applyPreset(p)}
-                  className="text-left px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/60 transition-all text-xs font-medium text-slate-700 flex items-center justify-between group"
+        <div className="p-6 overflow-y-auto space-y-5 text-sm text-slate-700">
+          {/* Instruções e Ações Rápidas */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+            <p className="text-xs text-slate-500">
+              Digite o horário de início e fim dos dias em que há aula:
+            </p>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleQuickFillSegQua}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-lg text-[#0f3b7d] bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+                title="Preencher Segunda e Quarta das 14h às 16h"
+              >
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span>Seg/Qua 14h-16h</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                title="Limpar todos os horários preenchidos"
+              >
+                <RotateCcw className="w-3 h-3 text-slate-500" />
+                <span>Limpar Todos</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quadro de Horários (7 Dias) */}
+          <div className="bg-slate-50/70 rounded-xl border border-slate-200/90 divide-y divide-slate-200/70 p-1 sm:p-2">
+            {WEEKDAYS.map((dia) => {
+              const current = diasHorarios[dia];
+              const isFilled = Boolean(current.inicio || current.fim);
+              const isWeekend = dia === 'Sábado' || dia === 'Domingo';
+
+              return (
+                <div
+                  key={dia}
+                  className={`flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 p-2.5 rounded-lg transition-colors ${
+                    isFilled ? 'bg-blue-50/50' : 'hover:bg-slate-100/50'
+                  }`}
                 >
-                  <span>{p.label}</span>
-                  <span className="text-[10px] text-slate-400 group-hover:text-[#0f3b7d]">
-                    Usar
-                  </span>
-                </button>
-              ))}
-            </div>
+                  {/* Nome do Dia */}
+                  <div className="w-32 sm:w-36 shrink-0 flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isFilled ? 'bg-[#0f3b7d]' : 'bg-slate-300'
+                      }`}
+                    />
+                    <span
+                      className={`text-xs font-semibold ${
+                        isFilled
+                          ? 'text-[#0f3b7d]'
+                          : isWeekend
+                          ? 'text-slate-500'
+                          : 'text-slate-800'
+                      }`}
+                    >
+                      {dia}
+                    </span>
+                  </div>
+
+                  {/* Campos de Horário */}
+                  <div className="flex items-center gap-2 flex-1 max-w-sm">
+                    <div className="relative flex-1">
+                      <Clock className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={current.inicio}
+                        onChange={(e) => handleTimeChange(dia, 'inicio', e.target.value)}
+                        onBlur={() => handleTimeBlur(dia, 'inicio')}
+                        placeholder="14h00"
+                        className="w-full pl-8 pr-2 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-[#0f3b7d] bg-white font-mono text-slate-900"
+                      />
+                    </div>
+
+                    <span className="text-xs text-slate-400 font-medium px-1">às</span>
+
+                    <div className="relative flex-1">
+                      <Clock className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={current.fim}
+                        onChange={(e) => handleTimeChange(dia, 'fim', e.target.value)}
+                        onBlur={() => handleTimeBlur(dia, 'fim')}
+                        placeholder="16h00"
+                        className="w-full pl-8 pr-2 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-[#0f3b7d] bg-white font-mono text-slate-900"
+                      />
+                    </div>
+
+                    {/* Botão limpar dia individual */}
+                    {isFilled ? (
+                      <button
+                        type="button"
+                        onClick={() => handleClearDay(dia)}
+                        className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        title={`Limpar horário de ${dia}`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <div className="w-6.5" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Seleção de Dias da Semana */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-              Dias da Semana com Aula
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {WEEKDAYS.map((day) => {
-                const isSelected = selectedDays.includes(day);
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => toggleDay(day)}
-                    className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all flex items-center justify-between ${
-                      isSelected
-                        ? 'bg-[#0f3b7d] text-white border-[#0f3b7d] shadow-xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span>{day.replace('-feira', '')}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
-                  </button>
-                );
-              })}
-            </div>
-            {selectedDays.length === 0 && (
-              <p className="text-[11px] text-amber-600 mt-1.5">
-                Nenhum dia selecionado. As linhas de horário na ficha ficarão em branco para preenchimento manual.
-              </p>
-            )}
-          </div>
-
-          {/* Horários */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <div>
-              <label
-                htmlFor="schedule-start-time"
-                className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5"
-              >
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                Horário Inicial
-              </label>
-              <input
-                id="schedule-start-time"
-                type="text"
-                value={horarioInicio}
-                onChange={(e) => setHorarioInicio(e.target.value)}
-                onBlur={(e) => setHorarioInicio(formatTime(e.target.value))}
-                placeholder="Ex: 14h00 ou 14:00"
-                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-[#0f3b7d] bg-white font-mono"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                Formata automático: 14 vira 14h00
-              </span>
-            </div>
-
-            <div>
-              <label
-                htmlFor="schedule-end-time"
-                className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5"
-              >
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                Horário Final
-              </label>
-              <input
-                id="schedule-end-time"
-                type="text"
-                value={horarioFim}
-                onChange={(e) => setHorarioFim(e.target.value)}
-                onBlur={(e) => setHorarioFim(formatTime(e.target.value))}
-                placeholder="Ex: 16h00 ou 16:00"
-                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-[#0f3b7d] bg-white font-mono"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                Formata automático: 16 vira 16h00
-              </span>
-            </div>
-          </div>
+          <p className="text-[11px] text-slate-400">
+            * Dias deixados em branco não terão horário impresso na ficha (ficam disponíveis para anotação manual).
+          </p>
 
           {/* Opção Verso */}
           <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white">

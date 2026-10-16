@@ -242,17 +242,6 @@ export function StudentTable({
                 </div>
               </th>
 
-              {/* Cursos Vinculados (Tags Ordenadas) */}
-              <th
-                onClick={() => handleSort('cursos_count')}
-                className="py-3 px-4 cursor-pointer hover:bg-slate-100/60 transition-colors"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span>Cursos Vinculados</span>
-                  {getSortIcon('cursos_count')}
-                </div>
-              </th>
-
               {/* Ações */}
               <th className="py-3 px-4 text-right">
                 <span>Ações</span>
@@ -282,9 +271,6 @@ export function StudentTable({
                   </td>
                   <td className="py-4 px-4">
                     <div className="w-24 h-4 bg-slate-200 rounded" />
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="w-48 h-4 bg-slate-200 rounded" />
                   </td>
                   <td className="py-4 px-4 text-right">
                     <div className="w-16 h-4 bg-slate-200 rounded ml-auto" />
@@ -369,41 +355,6 @@ export function StudentTable({
                       )}
                     </td>
 
-                    {/* Cursos Vinculados (Tags com Ordem Sequencial) */}
-                    <td className="py-3 px-4 max-w-[280px]">
-                      {student.cursos && student.cursos.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 items-center">
-                          {student.cursos.slice(0, 2).map((c) => (
-                            <span
-                              key={c.ordem}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-50 text-[#0f3b7d] border border-blue-200/60 whitespace-nowrap truncate max-w-[180px]"
-                              title={`Ordem ${c.ordem}: ${c.nome}`}
-                            >
-                              <span className="font-bold text-[#0f3b7d]">
-                                #{c.ordem}
-                              </span>
-                              <span className="truncate">{c.nome}</span>
-                            </span>
-                          ))}
-                          {student.cursos.length > 2 && (
-                            <span
-                              className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200"
-                              title={student.cursos
-                                .slice(2)
-                                .map((c) => `#${c.ordem} ${c.nome}`)
-                                .join(', ')}
-                            >
-                              +{student.cursos.length - 2} cursos
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 italic text-[11px]">
-                          Nenhum curso
-                        </span>
-                      )}
-                    </td>
-
                     {/* Ações */}
                     <td className="py-3 px-4 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1">
@@ -444,7 +395,7 @@ export function StudentTable({
             ) : (
               // Sem registros encontrados
               <tr>
-                <td colSpan={8} className="py-12 px-4 text-center">
+                <td colSpan={7} className="py-12 px-4 text-center">
                   <div className="max-w-sm mx-auto space-y-2">
                     <UserX className="w-8 h-8 text-slate-300 mx-auto" />
                     <p className="text-sm font-semibold text-slate-700">
