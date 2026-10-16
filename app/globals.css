@@ -97,7 +97,7 @@ body {
     break-after: auto !important;
   }
 
-  table, tr, td, th {
+  table, tr, td, th, .a4-sheet {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
