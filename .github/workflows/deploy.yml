@@ -40,7 +40,14 @@ jobs:
         run: npm test
 
       - name: Build static export (Next.js)
-        run: npx next build
+        run: |
+          npx next build 2>&1 | tee build.log || {
+            echo "## ❌ Build Error Details" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat build.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
         env:
           # Opcionais: se não configurados, o cliente usa o projeto Supabase padrão do Gestão de Apostilas
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://apfcbkucxjcleqxarlmv.supabase.co' }}
