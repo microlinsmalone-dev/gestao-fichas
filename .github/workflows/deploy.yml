@@ -40,7 +40,7 @@ jobs:
         run: npm test
 
       - name: Build static export (Next.js)
-        run: npm run build
+        run: npx next build
         env:
           # Opcionais: se não configurados, o cliente usa o projeto Supabase padrão do Gestão de Apostilas
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://apfcbkucxjcleqxarlmv.supabase.co' }}
