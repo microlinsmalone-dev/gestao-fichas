@@ -159,11 +159,9 @@ describe('Milestone 4: Sheet Geometry & Structure Specifications', () => {
     expect(typeof status.online).toBe('boolean');
   });
 
-  it('valida o molde literal extraído do ModeloFicha.xlsx e a injeção direta no binário .xlsx', async () => {
+  it('valida o molde literal vetorial extraído do ModeloFicha.xlsx e a injeção direta no binário .xlsx', async () => {
     const {
       MODELO_FICHA_LAYOUT,
-      MOLDE_FRENTE_DATA_URL,
-      MOLDE_VERSO_DATA_URL,
       MODELO_FICHA_XLSX_BASE64,
     } = await import('../../lib/constants/modelo-ficha-assets');
     const { generateFilledModeloFichaXlsx } = await import('../../lib/excel/modelo-ficha-injector');
@@ -173,8 +171,10 @@ describe('Milestone 4: Sheet Geometry & Structure Specifications', () => {
     expect(MODELO_FICHA_LAYOUT.frenteHeightPt).toBe(1393.5);
     expect(MODELO_FICHA_LAYOUT.versoWidthPt).toBe(808.5);
     expect(MODELO_FICHA_LAYOUT.versoHeightPt).toBe(1039.5);
-    expect(MOLDE_FRENTE_DATA_URL.startsWith('data:image/png;base64,')).toBe(true);
-    expect(MOLDE_VERSO_DATA_URL.startsWith('data:image/png;base64,')).toBe(true);
+    expect(MODELO_FICHA_LAYOUT.frenteVectorCells).toHaveLength(432);
+    expect(MODELO_FICHA_LAYOUT.versoVectorCells).toHaveLength(457);
+    expect(MODELO_FICHA_LAYOUT.weekdayHeaders).toHaveLength(7);
+    expect(MODELO_FICHA_LAYOUT.headerShapes.version.text).toBe('Gerado por aplicação. V1.0');
     expect(MODELO_FICHA_XLSX_BASE64.length).toBeGreaterThan(40000);
 
     const mockStudent: StudentWithCourses = {
