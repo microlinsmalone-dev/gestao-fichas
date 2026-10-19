@@ -117,10 +117,6 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
       }
     }
 
-    if (cell.text === '/         /') {
-      return '/     /';
-    }
-
     return cell.text;
   };
 
@@ -277,7 +273,10 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
                 : 'justify-start text-left truncate'
             }`}
           >
-            <span className={isCentered ? 'leading-tight' : 'truncate'}>
+            <span
+              className={isCentered ? 'leading-tight whitespace-pre-wrap' : 'truncate whitespace-pre'}
+              style={{ whiteSpace: cell.text === '/         /' ? 'pre' : isCentered ? 'pre-wrap' : 'pre' }}
+            >
               {displayText}
             </span>
           </div>

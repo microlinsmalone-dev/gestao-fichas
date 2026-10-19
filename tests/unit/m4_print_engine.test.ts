@@ -175,6 +175,10 @@ describe('Milestone 4: Sheet Geometry & Structure Specifications', () => {
     expect(MODELO_FICHA_LAYOUT.versoVectorCells).toHaveLength(457);
     expect(MODELO_FICHA_LAYOUT.weekdayHeaders).toHaveLength(7);
     expect(MODELO_FICHA_LAYOUT.headerShapes.version.text).toBe('Gerado por aplicação. V1.0');
+    const frenteA18 = MODELO_FICHA_LAYOUT.frenteVectorCells.find((c) => c.addr === 'A18');
+    const versoA4 = MODELO_FICHA_LAYOUT.versoVectorCells.find((c) => c.addr === 'A4');
+    expect(frenteA18?.text).toBe('/         /');
+    expect(versoA4?.text).toBe('/         /');
     expect(MODELO_FICHA_XLSX_BASE64.length).toBeGreaterThan(40000);
 
     const mockStudent: StudentWithCourses = {
