@@ -158,5 +158,77 @@ describe('Milestone 4: Sheet Geometry & Structure Specifications', () => {
     expect(status).toHaveProperty('online');
     expect(typeof status.online).toBe('boolean');
   });
+
+  it('valida o molde literal extraído do ModeloFicha.xlsx e a injeção direta no binário .xlsx', async () => {
+    const {
+      MODELO_FICHA_LAYOUT,
+      MOLDE_FRENTE_DATA_URL,
+      MOLDE_VERSO_DATA_URL,
+      MODELO_FICHA_XLSX_BASE64,
+    } = await import('../../lib/constants/modelo-ficha-assets');
+    const { generateFilledModeloFichaXlsx } = await import('../../lib/excel/modelo-ficha-injector');
+    const XLSX = await import('xlsx-js-style');
+
+    expect(MODELO_FICHA_LAYOUT.frenteWidthPt).toBe(808.5);
+    expect(MODELO_FICHA_LAYOUT.frenteHeightPt).toBe(1393.5);
+    expect(MODELO_FICHA_LAYOUT.versoWidthPt).toBe(808.5);
+    expect(MODELO_FICHA_LAYOUT.versoHeightPt).toBe(1039.5);
+    expect(MOLDE_FRENTE_DATA_URL.startsWith('data:image/png;base64,')).toBe(true);
+    expect(MOLDE_VERSO_DATA_URL.startsWith('data:image/png;base64,')).toBe(true);
+    expect(MODELO_FICHA_XLSX_BASE64.length).toBeGreaterThan(40000);
+
+    const mockStudent: StudentWithCourses = {
+      id: 1,
+      matricula: '4994565',
+      nome: 'ADRIAN BETUCCI',
+      email: 'amanda.sicchieri32@gmail.com',
+      data_nascimento: '2008-12-15',
+      instrutor: 'Antonio Fagner dos Santos Silva',
+      telefone: '16996256232',
+      data_inicio_curso: '2025-08-23',
+      data_termino_curso: '2027-05-27',
+      data_linha_vida: '2025-09-01',
+      data_form1: '2025-10-01',
+      data_form2: '2025-11-01',
+      data_dreamday: '2025-12-01',
+      data_fechamento1: '2026-01-15',
+      data_fechamento2: '2026-06-15',
+      data_fechamento3: '2027-01-15',
+      dia_semana: 'Segunda, Quarta',
+      horario_inicio: '14h00',
+      horario_fim: '16h00',
+      observacoes: null,
+      created_at: '2025-08-23T00:00:00Z',
+      updated_at: '2025-08-23T00:00:00Z',
+      cursos: [
+        { id: 1, nome: 'Introdução à Informática', ordem: 1 },
+        { id: 2, nome: 'Windows 11', ordem: 2 },
+        { id: 7, nome: 'Excel 2021', ordem: 7 },
+      ],
+    };
+
+    const schedule: ScheduleConfig = {
+      horarioInicio: '14h00',
+      horarioFim: '16h00',
+      diasSemana: ['Segunda-feira', 'Quarta-feira'],
+      includeVerso: true,
+    };
+
+    const xlsxBytes = await generateFilledModeloFichaXlsx(mockStudent, schedule);
+    expect(xlsxBytes.byteLength).toBeGreaterThan(40000);
+
+    // Lê de volta com SheetJS para comprovar que o .xlsx gerado é 100% válido e contém os dados injetados
+    const wb = XLSX.read(xlsxBytes, { type: 'array' });
+    expect(wb.SheetNames).toContain('Frente');
+    expect(wb.SheetNames).toContain('Verso');
+    const frente = wb.Sheets['Frente'];
+    expect(frente['A2']?.v).toBe('Matrícula: 4994565');
+    expect(frente['D2']?.v).toBe('Nome do Aluno: ADRIAN BETUCCI');
+    expect(frente['A3']?.v).toBe('Email: amanda.sicchieri32@gmail.com');
+    expect(frente['M5']?.v).toBe('23/08/2025');
+    expect(frente['P5']?.v).toBe('27/05/2027');
+    expect(frente['A10']?.v).toBe('1. Introdução à Informática');
+  });
 });
+
 

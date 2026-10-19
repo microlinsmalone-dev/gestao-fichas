@@ -21,12 +21,14 @@ import {
   AlertCircle,
   Loader2,
   FileSpreadsheet,
+  Download,
 } from 'lucide-react';
 import { useStudents } from '../../lib/hooks/use-students';
 import { SheetFrente } from '../../components/print/sheet-frente';
 import { SheetVerso } from '../../components/print/sheet-verso';
 import { ScheduleDialog } from '../../components/print/schedule-dialog';
 import { checkExcelBridge, printViaExcel, type BridgeStatus } from '../../lib/services/excel-bridge-service';
+import { downloadFilledModeloFichaXlsx } from '../../lib/excel/modelo-ficha-injector';
 import type { StudentWithCourses, ScheduleConfig } from '../../types/database';
 
 function ImprimirContent() {
@@ -131,6 +133,26 @@ function ImprimirContent() {
       });
     } finally {
       setIsPrintingExcel(false);
+    }
+  };
+
+  // Gera e baixa o próprio ModeloFicha.xlsx original preenchido para cada aluno selecionado
+  const handleDownloadXlsx = async () => {
+    setActionFeedback(null);
+    try {
+      for (const student of selectedStudents) {
+        await downloadFilledModeloFichaXlsx(student, scheduleConfig);
+      }
+      setActionFeedback({
+        type: 'success',
+        message: `${selectedStudents.length} planilha(s) ModeloFicha.xlsx gerada(s) com 100% da formatação original!`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setActionFeedback({
+        type: 'error',
+        message: `Erro ao gerar ModeloFicha.xlsx: ${msg}`,
+      });
     }
   };
 
@@ -243,6 +265,16 @@ function ImprimirContent() {
             >
               <FileText className="w-4 h-4" />
               <span>{includeVerso ? 'Verso Ativo' : 'Apenas Frente'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadXlsx}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/80 text-emerald-800 transition-all shadow-2xs"
+              title="Baixar o arquivo ModeloFicha.xlsx original preenchido com os dados do aluno"
+            >
+              <Download className="w-4 h-4 text-emerald-700" />
+              <span>Baixar .xlsx</span>
             </button>
 
             {/* BOTÃO NATIVO EXCEL (Quando o motor estiver ativo no computador) */}
