@@ -89,6 +89,15 @@ export function resolveStudentDaySchedule(
 
   // 3. Fallback para os campos dia_semana / horario_inicio / horario_fim salvos na ficha do aluno
   if (student.dia_semana) {
+    if (student.dia_semana.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(student.dia_semana);
+        if (parsed[dayShort]) return parsed[dayShort];
+        const fullName = `${dayShort}-feira`;
+        if (parsed[fullName]) return parsed[fullName];
+      } catch {}
+    }
+
     const studentDays = student.dia_semana.split(/[,;/]/).map((s) => s.trim());
     const active = studentDays.some(
       (d: string) =>

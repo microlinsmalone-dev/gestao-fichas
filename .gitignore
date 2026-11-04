@@ -22,5 +22,7 @@ supabase/migration_payload.json
 # Sistema operacional / editores
 .DS_Store
 Thumbs.db
+~$*
+*.tmp
 .vscode/
 .idea/

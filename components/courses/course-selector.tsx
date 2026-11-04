@@ -1,24 +1,24 @@
 // ==============================================================================
 // SISTEMA DE GESTÃO DE FICHAS PEDAGÓGICAS - MICROLINS
 // Component: components/courses/course-selector.tsx
-// Seleção com autocomplete, reordenação interativa (subir/descer e drag)
-// e limite de 18 cursos conforme modelo de ficha A4
+// Interface de preenchimento ágil com 18 slots em grid 3x6 (Col 1: 1..6, Col 2: 7..12, Col 3: 13..18)
+// Autocomplete instantâneo, drag-and-drop de reordenação nos números e modal de reordenação
 // ==============================================================================
 
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
-  Search,
-  Plus,
+  X,
+  ArrowUpDown,
   Trash2,
   ChevronUp,
   ChevronDown,
-  GripVertical,
-  BookOpen,
-  AlertCircle,
+  Check,
+  RotateCcw,
 } from 'lucide-react';
 import { useCourses } from '../../lib/hooks/use-courses';
+import { normalizeText } from '../../lib/utils/excel-utils';
 import type { Curso } from '../../types/database';
 
 export interface SelectedCourse {
@@ -32,260 +32,464 @@ interface CourseSelectorProps {
   disabled?: boolean;
 }
 
+interface SlotState {
+  curso_id: number;
+  nome: string;
+}
+
 export function CourseSelector({
   selectedCourses,
   onChange,
   disabled = false,
 }: CourseSelectorProps) {
-  const { courses: catalog, loading: catalogLoading } = useCourses();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const { courses: catalog } = useCourses();
+  const isInternalUpdateRef = useRef(false);
+
+  // Inicializa 18 slots a partir de selectedCourses
+  const [slots, setSlots] = useState<SlotState[]>(() => {
+    return Array.from({ length: 18 }, (_, i) => {
+      if (selectedCourses[i]) {
+        return { curso_id: selectedCourses[i].curso_id, nome: selectedCourses[i].nome };
+      }
+      return { curso_id: 0, nome: '' };
+    });
+  });
+
+  // Atualiza slots apenas quando selectedCourses mudar externamente (ex: abrir outro aluno)
+  useEffect(() => {
+    if (isInternalUpdateRef.current) {
+      isInternalUpdateRef.current = false;
+      return;
+    }
+    setSlots(
+      Array.from({ length: 18 }, (_, i) => {
+        if (selectedCourses[i]) {
+          return { curso_id: selectedCourses[i].curso_id, nome: selectedCourses[i].nome };
+        }
+        return { curso_id: 0, nome: '' };
+      })
+    );
+  }, [selectedCourses]);
+
+  // Propaga alterações não vazias para o pai
+  const syncToParent = useCallback(
+    (newSlots: SlotState[]) => {
+      isInternalUpdateRef.current = true;
+      const filled = newSlots
+        .filter((s) => s.nome.trim() !== '' && s.curso_id > 0)
+        .map((s) => ({ curso_id: s.curso_id, nome: s.nome }));
+      onChange(filled);
+    },
+    [onChange]
+  );
+
+  // Estados de busca/dropdown ativo em um slot específico
+  const [activeSlotDropdown, setActiveSlotDropdown] = useState<number | null>(null);
+  const [searchTerms, setSearchTerms] = useState<{ [slotIndex: number]: string }>({});
+  const [draggedSlotIndex, setDraggedSlotIndex] = useState<number | null>(null);
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Fecha o dropdown ao clicar fora
+  // Fecha dropdowns ao clicar fora
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsDropdownOpen(false);
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setActiveSlotDropdown(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Conjunto de IDs já selecionados para evitar duplicidade
+  // IDs já selecionados para destacar ou avisar
   const selectedCourseIds = useMemo(() => {
-    return new Set(selectedCourses.map((c) => c.curso_id));
-  }, [selectedCourses]);
+    const set = new Set<number>();
+    slots.forEach((s) => {
+      if (s.curso_id > 0) set.add(s.curso_id);
+    });
+    return set;
+  }, [slots]);
 
-  // Cursos do catálogo filtrados pela busca e que ainda não foram selecionados
-  const filteredCatalog = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    return catalog
-      .filter((c) => !selectedCourseIds.has(c.id))
-      .filter((c) => (term ? c.nome.toLowerCase().includes(term) : true))
-      .slice(0, 10); // Limita lista do dropdown para fluidez
-  }, [catalog, selectedCourseIds, searchTerm]);
+  // Contagem de cursos preenchidos
+  const filledCount = useMemo(() => {
+    return slots.filter((s) => s.curso_id > 0 && s.nome.trim() !== '').length;
+  }, [slots]);
 
-  const canAddMore = selectedCourses.length < 18;
-
-  const handleSelectCourse = (curso: Curso) => {
-    if (!canAddMore || disabled) return;
-    const updated = [...selectedCourses, { curso_id: curso.id, nome: curso.nome }];
-    onChange(updated);
-    setSearchTerm('');
-    setIsDropdownOpen(false);
-    inputRef.current?.focus();
-  };
-
-  const handleRemoveCourse = (indexToRemove: number) => {
+  // Manipulador de seleção de curso em um slot
+  const handleSelectCourseForSlot = (slotIndex: number, curso: Curso) => {
     if (disabled) return;
-    const updated = selectedCourses.filter((_, idx) => idx !== indexToRemove);
-    onChange(updated);
+    const updated = [...slots];
+    updated[slotIndex] = {
+      curso_id: curso.id,
+      nome: curso.nome,
+    };
+    setSlots(updated);
+    syncToParent(updated);
+
+    // Limpa estado de busca do slot e fecha dropdown
+    setSearchTerms((prev) => ({ ...prev, [slotIndex]: '' }));
+    setActiveSlotDropdown(null);
   };
 
-  const handleMoveUp = (index: number) => {
-    if (index === 0 || disabled) return;
-    const updated = [...selectedCourses];
-    const temp = updated[index - 1];
-    updated[index - 1] = updated[index];
-    updated[index] = temp;
-    onChange(updated);
-  };
-
-  const handleMoveDown = (index: number) => {
-    if (index === selectedCourses.length - 1 || disabled) return;
-    const updated = [...selectedCourses];
-    const temp = updated[index + 1];
-    updated[index + 1] = updated[index];
-    updated[index] = temp;
-    onChange(updated);
-  };
-
-  // Drag and drop interativo
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+  // Limpar um slot individual
+  const handleClearSlot = (slotIndex: number) => {
     if (disabled) return;
-    setDraggedIndex(index);
+    const updated = [...slots];
+    updated[slotIndex] = { curso_id: 0, nome: '' };
+    setSlots(updated);
+    syncToParent(updated);
+    setSearchTerms((prev) => ({ ...prev, [slotIndex]: '' }));
+  };
+
+  // Limpar todos os slots
+  const handleClearAll = () => {
+    if (disabled) return;
+    const updated = Array.from({ length: 18 }, () => ({ curso_id: 0, nome: '' }));
+    setSlots(updated);
+    syncToParent(updated);
+    setSearchTerms({});
+    setActiveSlotDropdown(null);
+  };
+
+  // Drag and drop entre números/slots
+  const handleDragStart = (e: React.DragEvent, slotIndex: number) => {
+    if (disabled) return;
+    setDraggedSlotIndex(slotIndex);
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(slotIndex));
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index || disabled) return;
+    e.dataTransfer.dropEffect = 'move';
+  };
 
-    const updated = [...selectedCourses];
-    const item = updated.splice(draggedIndex, 1)[0];
-    updated.splice(index, 0, item);
-    setDraggedIndex(index);
-    onChange(updated);
+  const handleDrop = (e: React.DragEvent, targetSlotIndex: number) => {
+    e.preventDefault();
+    if (disabled || draggedSlotIndex === null || draggedSlotIndex === targetSlotIndex) {
+      setDraggedSlotIndex(null);
+      return;
+    }
+
+    const updated = [...slots];
+    const sourceItem = updated[draggedSlotIndex];
+    const targetItem = updated[targetSlotIndex];
+
+    // Troca de posição (Swap direto como no sistema desktop)
+    updated[draggedSlotIndex] = targetItem;
+    updated[targetSlotIndex] = sourceItem;
+
+    setSlots(updated);
+    syncToParent(updated);
+    setDraggedSlotIndex(null);
   };
 
   const handleDragEnd = () => {
-    setDraggedIndex(null);
+    setDraggedSlotIndex(null);
   };
 
-  return (
-    <div className="space-y-3" ref={containerRef}>
-      {/* Cabeçalho da Seção de Cursos */}
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-          <BookOpen className="w-3.5 h-3.5 text-[#0f3b7d]" />
-          <span>Cursos Contratados & Ordem Cronológica</span>
-        </label>
-        <span
-          className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-            selectedCourses.length >= 18
-              ? 'bg-amber-100 text-amber-800'
-              : 'bg-blue-50 text-[#0f3b7d]'
-          }`}
-        >
-          {selectedCourses.length} de 18 cursos
-        </span>
-      </div>
+  // Funções para o modal de reordenação sequencial
+  const handleMoveItemInReorder = (fromIndex: number, toIndex: number) => {
+    const filled = slots.filter((s) => s.curso_id > 0 && s.nome.trim() !== '');
+    if (toIndex < 0 || toIndex >= filled.length) return;
 
-      {/* Campo de Autocomplete e Busca */}
-      <div className="relative">
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            ref={inputRef}
-            type="text"
-            disabled={disabled || !canAddMore}
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setIsDropdownOpen(true);
-            }}
-            onFocus={() => setIsDropdownOpen(true)}
-            placeholder={
-              !canAddMore
-                ? 'Limite máximo de 18 cursos atingido'
-                : catalogLoading
-                ? 'Carregando catálogo de cursos...'
-                : 'Digite para buscar cursos no catálogo...'
-            }
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
-          />
-        </div>
+    const updatedFilled = [...filled];
+    const [moved] = updatedFilled.splice(fromIndex, 1);
+    updatedFilled.splice(toIndex, 0, moved);
 
-        {/* Dropdown com os Resultados Filtrados */}
-        {isDropdownOpen && canAddMore && !disabled && (
-          <div className="absolute z-20 left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white rounded-xl shadow-lg border border-slate-200/90 py-1 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-150">
-            {filteredCatalog.length > 0 ? (
-              filteredCatalog.map((curso) => (
-                <button
-                  key={curso.id}
-                  type="button"
-                  onClick={() => handleSelectCourse(curso)}
-                  className="w-full px-3.5 py-2 text-left text-xs text-slate-800 hover:bg-blue-50/80 hover:text-[#0f3b7d] flex items-center justify-between group transition-colors"
-                >
-                  <span className="font-medium truncate">{curso.nome}</span>
-                  <Plus className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0f3b7d] shrink-0" />
-                </button>
-              ))
-            ) : (
-              <div className="px-3.5 py-2.5 text-xs text-slate-400 text-center">
-                {catalogLoading
-                  ? 'Carregando cursos...'
-                  : searchTerm
-                  ? 'Nenhum curso correspondente encontrado'
-                  : 'Todos os cursos compatíveis já foram adicionados'}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+    const newSlots = Array.from({ length: 18 }, (_, i) => {
+      return updatedFilled[i] ? { ...updatedFilled[i] } : { curso_id: 0, nome: '' };
+    });
 
-      {/* Alerta de Limite Máximo */}
-      {!canAddMore && (
-        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-          <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-          <span>
-            A ficha pedagógica A4 suporta exatamente até 18 cursos no verso.
-          </span>
-        </div>
-      )}
+    setSlots(newSlots);
+    syncToParent(newSlots);
+  };
 
-      {/* Lista Interativa de Cursos Vinculados com Reordenação */}
-      {selectedCourses.length > 0 ? (
-        <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-          {selectedCourses.map((course, index) => (
+  const handleRemoveItemInReorder = (indexToRemove: number) => {
+    const filled = slots.filter((s) => s.curso_id > 0 && s.nome.trim() !== '');
+    const updatedFilled = filled.filter((_, idx) => idx !== indexToRemove);
+
+    const newSlots = Array.from({ length: 18 }, (_, i) => {
+      return updatedFilled[i] ? { ...updatedFilled[i] } : { curso_id: 0, nome: '' };
+    });
+
+    setSlots(newSlots);
+    syncToParent(newSlots);
+  };
+
+  // Renderização de cada coluna (6 slots por coluna)
+  const renderColumn = (startIndex: number, endIndex: number, colNumber: number) => {
+    const columnSlots = slots.slice(startIndex, endIndex);
+
+    return (
+      <div key={`col-${colNumber}`} className="space-y-2.5">
+        {columnSlots.map((slot, localIdx) => {
+          const slotIndex = startIndex + localIdx;
+          const slotNumber = slotIndex + 1;
+          const isDropdownOpen = activeSlotDropdown === slotIndex;
+          const currentSearch = searchTerms[slotIndex] ?? '';
+          const hasValue = slot.curso_id > 0 && slot.nome.trim() !== '';
+
+          // Filtra catálogo para o dropdown desse slot
+          const filteredOptions = catalog.filter((c) => {
+            if (!currentSearch.trim()) return true;
+            return normalizeText(c.nome).includes(normalizeText(currentSearch));
+          });
+
+          return (
             <div
-              key={`${course.curso_id}-${index}`}
-              draggable={!disabled}
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnd={handleDragEnd}
-              className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all ${
-                draggedIndex === index
-                  ? 'bg-blue-50/80 border-[#0f3b7d] shadow-sm'
-                  : 'bg-slate-50/70 hover:bg-slate-50 border-slate-200/80'
+              key={`slot-${slotIndex}`}
+              className={`relative flex items-center gap-2 p-1.5 rounded-xl border transition-all ${
+                draggedSlotIndex === slotIndex
+                  ? 'border-blue-500 bg-blue-50/70 shadow-sm'
+                  : hasValue
+                  ? 'border-slate-200 bg-white hover:border-blue-300'
+                  : 'border-slate-200/80 bg-slate-50/60 hover:bg-white hover:border-slate-300'
               }`}
             >
-              {/* Ícone de Arrastar */}
+              {/* Número do Slot (Badge Arrastável como na img3) */}
               <div
-                className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 shrink-0"
-                title="Arraste para reordenar"
+                draggable={!disabled}
+                onDragStart={(e) => handleDragStart(e, slotIndex)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, slotIndex)}
+                onDragEnd={handleDragEnd}
+                title="Clique e arraste este número para trocar a posição do curso"
+                className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs select-none cursor-grab active:cursor-grabbing shrink-0 transition-transform hover:scale-105 shadow-2xs ${
+                  hasValue
+                    ? 'bg-[#0f3b7d] text-white'
+                    : 'bg-slate-200 text-slate-600 hover:bg-blue-100 hover:text-[#0f3b7d]'
+                }`}
               >
-                <GripVertical className="w-4 h-4" />
+                {slotNumber}
               </div>
 
-              {/* Badge com a Ordem Sequencial (1..18) */}
-              <span className="w-5 h-5 rounded-full bg-[#0f3b7d] text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-xs">
-                {index + 1}
-              </span>
+              {/* Campo de Entrada / Autocomplete do Slot */}
+              <div className="flex-1 relative min-w-0">
+                <input
+                  type="text"
+                  disabled={disabled}
+                  value={isDropdownOpen ? currentSearch : slot.nome}
+                  onFocus={() => {
+                    setActiveSlotDropdown(slotIndex);
+                    setSearchTerms((prev) => ({
+                      ...prev,
+                      [slotIndex]: slot.nome || '',
+                    }));
+                  }}
+                  onChange={(e) => {
+                    setSearchTerms((prev) => ({
+                      ...prev,
+                      [slotIndex]: e.target.value,
+                    }));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setActiveSlotDropdown(null);
+                    }
+                  }}
+                  placeholder={`Módulo ${slotNumber}...`}
+                  className={`w-full px-2.5 py-1.5 text-xs rounded-lg border focus:outline-none transition-all truncate pr-6 font-medium ${
+                    hasValue
+                      ? 'bg-slate-50/50 border-slate-200 text-slate-900 focus:border-[#0f3b7d] focus:bg-white'
+                      : 'bg-transparent border-dashed border-slate-300 text-slate-500 focus:border-[#0f3b7d] focus:bg-white focus:border-solid'
+                  }`}
+                />
 
-              {/* Nome do Curso */}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-800 truncate">
-                  {course.nome}
+                {/* Botão de Limpar Slot */}
+                {hasValue && !disabled && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearSlot(slotIndex)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                    title={`Limpar módulo ${slotNumber}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* Dropdown de Autocomplete para este Slot */}
+                {isDropdownOpen && !disabled && (
+                  <div className="absolute z-40 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-200 py-1 divide-y divide-slate-100 animate-in fade-in duration-100">
+                    {filteredOptions.length > 0 ? (
+                      filteredOptions.slice(0, 12).map((c) => {
+                        const isSelectedInThisSlot = slot.curso_id === c.id;
+                        const isUsedInOtherSlot =
+                          selectedCourseIds.has(c.id) && !isSelectedInThisSlot;
+
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleSelectCourseForSlot(slotIndex, c);
+                            }}
+                            onClick={() => {
+                              handleSelectCourseForSlot(slotIndex, c);
+                            }}
+                            className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${
+                              isSelectedInThisSlot
+                                ? 'bg-blue-50 text-[#0f3b7d] font-bold'
+                                : 'text-slate-800 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="truncate pr-2">{c.nome}</span>
+                            {isSelectedInThisSlot ? (
+                              <Check className="w-3.5 h-3.5 text-[#0f3b7d] shrink-0" />
+                            ) : isUsedInOtherSlot ? (
+                              <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">
+                                Já alocado
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="px-3 py-2 text-xs text-slate-400 text-center">
+                        Nenhum curso encontrado no catálogo
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const filledItemsList = slots.filter((s) => s.curso_id > 0 && s.nome.trim() !== '');
+
+  return (
+    <div className="space-y-4" ref={containerRef}>
+      {/* Top Header com Título e Ações da Tela de Cursos */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50/80 border border-slate-200/80 p-3 rounded-2xl">
+        <h3 className="text-sm font-bold text-slate-900 tracking-wide uppercase">
+          Cursos Contratados
+        </h3>
+
+        {/* Botões de Ação Rápida */}
+        <div className="flex items-center gap-2">
+          {filledCount > 1 && (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => setIsReorderModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs"
+              title="Abrir painel para reordenar cursos sequencialmente"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 text-[#0f3b7d]" />
+              <span>Reordenar</span>
+            </button>
+          )}
+
+          {filledCount > 0 && (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={handleClearAll}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-colors shadow-2xs"
+              title="Limpar todos os 18 slots"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Limpar Todos</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Grade de 3 Colunas x 6 Linhas (Layout Exato da img3) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {renderColumn(0, 6, 1)}
+        {renderColumn(6, 12, 2)}
+        {renderColumn(12, 18, 3)}
+      </div>
+
+      {/* Modal Dedicado de Reordenação de Cursos Escolhidos */}
+      {isReorderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">
+                  Reordenar Cursos Escolhidos
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Ajuste a ordem sequencial com as setas para cima ou para baixo
                 </p>
               </div>
-
-              {/* Controles de Subir e Descer */}
-              <div className="flex items-center gap-0.5 shrink-0">
-                <button
-                  type="button"
-                  disabled={index === 0 || disabled}
-                  onClick={() => handleMoveUp(index)}
-                  className="p-1 rounded text-slate-400 hover:text-[#0f3b7d] hover:bg-blue-50 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                  title="Mover para cima"
-                >
-                  <ChevronUp className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  disabled={index === selectedCourses.length - 1 || disabled}
-                  onClick={() => handleMoveDown(index)}
-                  className="p-1 rounded text-slate-400 hover:text-[#0f3b7d] hover:bg-blue-50 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                  title="Mover para baixo"
-                >
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Botão de Excluir do Vínculo */}
               <button
                 type="button"
-                disabled={disabled}
-                onClick={() => handleRemoveCourse(index)}
-                className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0"
-                title="Remover curso"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="p-4 rounded-xl border border-dashed border-slate-200 text-center text-slate-400 text-xs">
-          Nenhum curso vinculado ainda. Busque e adicione os cursos acima.
+
+            <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+              {filledItemsList.length > 0 ? (
+                filledItemsList.map((item, idx) => (
+                  <div
+                    key={`${item.curso_id}-${idx}`}
+                    className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                  >
+                    <span className="w-5 h-5 rounded-md bg-[#0f3b7d] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="flex-1 font-semibold text-slate-800 truncate">
+                      {item.nome}
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => handleMoveItemInReorder(idx, idx - 1)}
+                        className="p-1 rounded text-slate-500 hover:text-[#0f3b7d] hover:bg-blue-50 disabled:opacity-30"
+                        title="Subir posição"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === filledItemsList.length - 1}
+                        onClick={() => handleMoveItemInReorder(idx, idx + 1)}
+                        className="p-1 rounded text-slate-500 hover:text-[#0f3b7d] hover:bg-blue-50 disabled:opacity-30"
+                        title="Descer posição"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItemInReorder(idx)}
+                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        title="Remover curso"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6 text-xs text-slate-400">
+                  Nenhum curso preenchido para reordenar.
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-white bg-[#0f3b7d] hover:bg-[#0a2e68] rounded-xl shadow-xs transition-colors"
+              >
+                Concluir Reordenação
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

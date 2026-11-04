@@ -54,9 +54,9 @@ function ImprimirContent() {
 
   // Configuração de horários
   const [scheduleConfig, setScheduleConfig] = useState<ScheduleConfig>({
-    horarioInicio: '14h00',
-    horarioFim: '16h00',
-    diasSemana: ['Segunda-feira', 'Quarta-feira'],
+    horarioInicio: '',
+    horarioFim: '',
+    diasSemana: [],
     includeVerso: true,
   });
 
