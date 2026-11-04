@@ -119,9 +119,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
 
       {/* MODAL POP-UP DO SISTEMA */}
       {modalOpen && modalOptions && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
           <div
-            className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden transform animate-in zoom-in-95 duration-200"
+            className="bg-[#242424] rounded-2xl max-w-md w-full shadow-2xl border border-[#333333] overflow-hidden transform animate-in zoom-in-95 duration-200 text-slate-100"
             role="dialog"
             aria-modal="true"
           >
@@ -130,33 +130,33 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 <div
                   className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
                     modalOptions.type === 'error'
-                      ? 'bg-rose-50'
+                      ? 'bg-rose-950/60 text-rose-400 border border-rose-800'
                       : modalOptions.type === 'success'
-                      ? 'bg-emerald-50'
+                      ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'
                       : modalOptions.type === 'warning'
-                      ? 'bg-amber-50'
-                      : 'bg-blue-50'
+                      ? 'bg-amber-950/60 text-amber-400 border border-amber-800'
+                      : 'bg-[#1f6aa5]/20 text-[#38bdf8] border border-[#1f6aa5]/40'
                   }`}
                 >
                   {getIcon(modalOptions.type)}
                 </div>
                 <div className="flex-1 min-w-0 pt-0.5">
-                  <h3 className="text-base font-bold text-slate-900">
+                  <h3 className="text-base font-bold text-white">
                     {modalOptions.title}
                   </h3>
-                  <p className="text-sm text-slate-600 mt-2 leading-relaxed whitespace-pre-line">
+                  <p className="text-sm text-slate-300 mt-2 leading-relaxed whitespace-pre-line">
                     {modalOptions.message}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 bg-[#1e1e1e] border-t border-[#333333] flex items-center justify-end gap-3">
               {isConfirmModal && (
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-all"
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[#2e2e2e] rounded-xl transition-all"
                 >
                   {modalOptions.cancelText || 'Cancelar'}
                 </button>
@@ -166,10 +166,10 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 onClick={handleConfirm}
                 className={`px-5 py-2 text-xs font-semibold rounded-xl text-white shadow-sm transition-all ${
                   modalOptions.type === 'error'
-                    ? 'bg-rose-600 hover:bg-rose-700'
+                    ? 'bg-rose-700 hover:bg-rose-800 border border-rose-600'
                     : modalOptions.type === 'warning'
-                    ? 'bg-amber-600 hover:bg-amber-700'
-                    : 'bg-[#0f3b7d] hover:bg-[#0a2e68]'
+                    ? 'bg-amber-700 hover:bg-amber-800 border border-amber-600'
+                    : 'bg-[#1f6aa5] hover:bg-[#1a5c8e] border border-[#2b82c4]'
                 }`}
               >
                 {modalOptions.confirmText || 'OK'}
@@ -184,18 +184,18 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-start gap-3 p-4 bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-slate-200/80 text-xs animate-in slide-in-from-bottom-3 duration-200"
+            className="pointer-events-auto flex items-start gap-3 p-4 bg-[#242424]/95 backdrop-blur-md rounded-xl shadow-xl border border-[#333333] text-xs animate-in slide-in-from-bottom-3 duration-200"
           >
             <div className="shrink-0 mt-0.5">{getIcon(toast.type)}</div>
             <div className="flex-1 min-w-0">
               {toast.title && (
-                <p className="font-bold text-slate-900 mb-0.5">{toast.title}</p>
+                <p className="font-bold text-white mb-0.5">{toast.title}</p>
               )}
-              <p className="text-slate-600 leading-normal">{toast.message}</p>
+              <p className="text-slate-300 leading-normal">{toast.message}</p>
             </div>
             <button
               onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
-              className="text-slate-400 hover:text-slate-600 p-0.5 rounded"
+              className="text-slate-400 hover:text-white p-0.5 rounded"
             >
               <X className="w-3.5 h-3.5" />
             </button>

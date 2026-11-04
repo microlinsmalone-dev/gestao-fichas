@@ -20,16 +20,16 @@ export function Header() {
   ) || navigationItems[0];
 
   return (
-    <header className="no-print bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
+    <header className="no-print bg-[#242424] border-b border-[#333333] sticky top-0 z-30 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Section info */}
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50 text-[#0f3b7d] sm:hidden">
+            <div className="p-2 rounded-lg bg-[#1f6aa5]/20 text-[#38bdf8] sm:hidden border border-[#1f6aa5]/40">
               <GraduationCap className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
                 {currentItem.label}
               </h2>
             </div>
@@ -49,8 +49,8 @@ export function Header() {
                   href={item.href}
                   className={`p-2 rounded-lg transition-colors ${
                     isActive
-                      ? 'bg-[#0f3b7d] text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      ? 'bg-[#1f6aa5] text-white'
+                      : 'text-slate-400 hover:bg-[#333333] hover:text-white'
                   }`}
                   title={item.label}
                 >
@@ -62,8 +62,8 @@ export function Header() {
 
           {/* Institutional Badge */}
           <div className="hidden sm:flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
-              <Sparkles className="w-3.5 h-3.5 text-[#0f3b7d]" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1e1e1e] border border-[#3a3a3a] text-xs font-medium text-slate-300">
+              <Sparkles className="w-3.5 h-3.5 text-[#38bdf8]" />
               <span>Microlins Potirendaba</span>
             </div>
           </div>

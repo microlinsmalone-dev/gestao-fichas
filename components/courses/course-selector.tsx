@@ -242,10 +242,10 @@ export function CourseSelector({
               key={`slot-${slotIndex}`}
               className={`relative flex items-center gap-2 p-1.5 rounded-xl border transition-all ${
                 draggedSlotIndex === slotIndex
-                  ? 'border-blue-500 bg-blue-50/70 shadow-sm'
+                  ? 'border-blue-500 bg-blue-950/40 shadow-sm'
                   : hasValue
-                  ? 'border-slate-200 bg-white hover:border-blue-300'
-                  : 'border-slate-200/80 bg-slate-50/60 hover:bg-white hover:border-slate-300'
+                  ? 'border-slate-700 bg-[#2b2b2b] hover:border-blue-500'
+                  : 'border-slate-800 bg-[#222222] hover:bg-[#2a2a2a] hover:border-slate-700'
               }`}
             >
               {/* Número do Slot (Badge Arrastável como na img3) */}
@@ -258,8 +258,8 @@ export function CourseSelector({
                 title="Clique e arraste este número para trocar a posição do curso"
                 className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs select-none cursor-grab active:cursor-grabbing shrink-0 transition-transform hover:scale-105 shadow-2xs ${
                   hasValue
-                    ? 'bg-[#0f3b7d] text-white'
-                    : 'bg-slate-200 text-slate-600 hover:bg-blue-100 hover:text-[#0f3b7d]'
+                    ? 'bg-[#1f6aa5] text-white'
+                    : 'bg-[#333333] text-slate-400 hover:bg-[#1f6aa5]/40 hover:text-white'
                 }`}
               >
                 {slotNumber}
@@ -268,7 +268,9 @@ export function CourseSelector({
               {/* Campo de Entrada / Autocomplete do Slot */}
               <div className="flex-1 relative min-w-0">
                 <input
+                  id={`course-slot-${slotIndex}`}
                   type="text"
+                  tabIndex={slotIndex + 1}
                   disabled={disabled}
                   value={isDropdownOpen ? currentSearch : slot.nome}
                   onFocus={() => {
@@ -287,13 +289,38 @@ export function CourseSelector({
                   onKeyDown={(e) => {
                     if (e.key === 'Escape') {
                       setActiveSlotDropdown(null);
+                    } else if (e.key === 'Tab') {
+                      setActiveSlotDropdown(null);
+                      if (!e.shiftKey) {
+                        if (slotIndex < 17) {
+                          e.preventDefault();
+                          const next = document.getElementById(`course-slot-${slotIndex + 1}`);
+                          next?.focus();
+                        }
+                      } else {
+                        if (slotIndex > 0) {
+                          e.preventDefault();
+                          const prev = document.getElementById(`course-slot-${slotIndex - 1}`);
+                          prev?.focus();
+                        }
+                      }
+                    } else if (e.key === 'Enter') {
+                      if (isDropdownOpen && filteredOptions.length > 0) {
+                        e.preventDefault();
+                        handleSelectCourseForSlot(slotIndex, filteredOptions[0]);
+                        setActiveSlotDropdown(null);
+                        if (slotIndex < 17) {
+                          const next = document.getElementById(`course-slot-${slotIndex + 1}`);
+                          next?.focus();
+                        }
+                      }
                     }
                   }}
                   placeholder={`Módulo ${slotNumber}...`}
                   className={`w-full px-2.5 py-1.5 text-xs rounded-lg border focus:outline-none transition-all truncate pr-6 font-medium ${
                     hasValue
-                      ? 'bg-slate-50/50 border-slate-200 text-slate-900 focus:border-[#0f3b7d] focus:bg-white'
-                      : 'bg-transparent border-dashed border-slate-300 text-slate-500 focus:border-[#0f3b7d] focus:bg-white focus:border-solid'
+                      ? 'bg-[#333333] border-slate-600 text-white focus:border-[#1f6aa5] focus:bg-[#3a3a3a]'
+                      : 'bg-transparent border-dashed border-slate-700 text-slate-400 placeholder-slate-500 focus:border-[#1f6aa5] focus:bg-[#333333] focus:text-white focus:border-solid'
                   }`}
                 />
 
@@ -301,8 +328,9 @@ export function CourseSelector({
                 {hasValue && !disabled && (
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={() => handleClearSlot(slotIndex)}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
                     title={`Limpar módulo ${slotNumber}`}
                   >
                     <X className="w-3.5 h-3.5" />
@@ -311,7 +339,7 @@ export function CourseSelector({
 
                 {/* Dropdown de Autocomplete para este Slot */}
                 {isDropdownOpen && !disabled && (
-                  <div className="absolute z-40 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-200 py-1 divide-y divide-slate-100 animate-in fade-in duration-100">
+                  <div className="absolute z-40 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-[#242424] rounded-xl shadow-2xl border border-slate-700 py-1 divide-y divide-slate-700/60 animate-in fade-in duration-100">
                     {filteredOptions.length > 0 ? (
                       filteredOptions.slice(0, 12).map((c) => {
                         const isSelectedInThisSlot = slot.curso_id === c.id;
@@ -322,6 +350,7 @@ export function CourseSelector({
                           <button
                             key={c.id}
                             type="button"
+                            tabIndex={-1}
                             onMouseDown={(e) => {
                               e.preventDefault();
                               handleSelectCourseForSlot(slotIndex, c);
@@ -331,15 +360,15 @@ export function CourseSelector({
                             }}
                             className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between transition-colors ${
                               isSelectedInThisSlot
-                                ? 'bg-blue-50 text-[#0f3b7d] font-bold'
-                                : 'text-slate-800 hover:bg-slate-50'
+                                ? 'bg-[#1f6aa5]/30 text-[#38bdf8] font-bold'
+                                : 'text-slate-200 hover:bg-[#333333]'
                             }`}
                           >
                             <span className="truncate pr-2">{c.nome}</span>
                             {isSelectedInThisSlot ? (
-                              <Check className="w-3.5 h-3.5 text-[#0f3b7d] shrink-0" />
+                              <Check className="w-3.5 h-3.5 text-[#38bdf8] shrink-0" />
                             ) : isUsedInOtherSlot ? (
-                              <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">
+                              <span className="text-[10px] text-amber-300 bg-amber-950/50 border border-amber-800/40 px-1.5 py-0.5 rounded shrink-0">
                                 Já alocado
                               </span>
                             ) : null}
@@ -366,8 +395,8 @@ export function CourseSelector({
   return (
     <div className="space-y-4" ref={containerRef}>
       {/* Top Header com Título e Ações da Tela de Cursos */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50/80 border border-slate-200/80 p-3 rounded-2xl">
-        <h3 className="text-sm font-bold text-slate-900 tracking-wide uppercase">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1e1e1e] border border-slate-700/80 p-3 rounded-2xl">
+        <h3 className="text-sm font-bold text-white tracking-wide uppercase">
           Cursos Contratados
         </h3>
 
@@ -378,10 +407,10 @@ export function CourseSelector({
               type="button"
               disabled={disabled}
               onClick={() => setIsReorderModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-slate-200 bg-[#2a2a2a] border border-slate-700 hover:bg-[#333333] transition-colors shadow-2xs"
               title="Abrir painel para reordenar cursos sequencialmente"
             >
-              <ArrowUpDown className="w-3.5 h-3.5 text-[#0f3b7d]" />
+              <ArrowUpDown className="w-3.5 h-3.5 text-[#38bdf8]" />
               <span>Reordenar</span>
             </button>
           )}
@@ -391,7 +420,7 @@ export function CourseSelector({
               type="button"
               disabled={disabled}
               onClick={handleClearAll}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-rose-300 bg-rose-950/40 border border-rose-800/50 hover:bg-rose-900/40 transition-colors shadow-2xs"
               title="Limpar todos os 18 slots"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -410,21 +439,21 @@ export function CourseSelector({
 
       {/* Modal Dedicado de Reordenação de Cursos Escolhidos */}
       {isReorderModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-[#242424] rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-700 space-y-4 animate-in zoom-in-95 text-white">
+            <div className="flex items-center justify-between border-b border-slate-700 pb-3">
               <div>
-                <h4 className="text-sm font-bold text-slate-900">
+                <h4 className="text-sm font-bold text-white">
                   Reordenar Cursos Escolhidos
                 </h4>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-400">
                   Ajuste a ordem sequencial com as setas para cima ou para baixo
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsReorderModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/50"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -435,12 +464,12 @@ export function CourseSelector({
                 filledItemsList.map((item, idx) => (
                   <div
                     key={`${item.curso_id}-${idx}`}
-                    className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs"
+                    className="flex items-center gap-2 p-2 rounded-xl bg-[#2e2e2e] border border-slate-700 text-xs"
                   >
-                    <span className="w-5 h-5 rounded-md bg-[#0f3b7d] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+                    <span className="w-5 h-5 rounded-md bg-[#1f6aa5] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
-                    <span className="flex-1 font-semibold text-slate-800 truncate">
+                    <span className="flex-1 font-semibold text-slate-100 truncate">
                       {item.nome}
                     </span>
                     <div className="flex items-center gap-1 shrink-0">
@@ -448,7 +477,7 @@ export function CourseSelector({
                         type="button"
                         disabled={idx === 0}
                         onClick={() => handleMoveItemInReorder(idx, idx - 1)}
-                        className="p-1 rounded text-slate-500 hover:text-[#0f3b7d] hover:bg-blue-50 disabled:opacity-30"
+                        className="p-1 rounded text-slate-400 hover:text-[#38bdf8] hover:bg-blue-950/40 disabled:opacity-30"
                         title="Subir posição"
                       >
                         <ChevronUp className="w-4 h-4" />
@@ -457,7 +486,7 @@ export function CourseSelector({
                         type="button"
                         disabled={idx === filledItemsList.length - 1}
                         onClick={() => handleMoveItemInReorder(idx, idx + 1)}
-                        className="p-1 rounded text-slate-500 hover:text-[#0f3b7d] hover:bg-blue-50 disabled:opacity-30"
+                        className="p-1 rounded text-slate-400 hover:text-[#38bdf8] hover:bg-blue-950/40 disabled:opacity-30"
                         title="Descer posição"
                       >
                         <ChevronDown className="w-4 h-4" />
@@ -465,7 +494,7 @@ export function CourseSelector({
                       <button
                         type="button"
                         onClick={() => handleRemoveItemInReorder(idx)}
-                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-950/40"
                         title="Remover curso"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -480,11 +509,11 @@ export function CourseSelector({
               )}
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <div className="pt-3 border-t border-slate-700 flex justify-end">
               <button
                 type="button"
                 onClick={() => setIsReorderModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-white bg-[#0f3b7d] hover:bg-[#0a2e68] rounded-xl shadow-xs transition-colors"
+                className="px-4 py-2 text-xs font-bold text-white bg-[#1f6aa5] hover:bg-[#154f78] rounded-xl shadow-xs transition-colors"
               >
                 Concluir Reordenação
               </button>

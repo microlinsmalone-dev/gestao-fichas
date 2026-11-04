@@ -10,6 +10,8 @@ import {
   formatTime,
   formatDateForSheet,
   formatPhoneForSheet,
+  parseFlexibleDate,
+  parseStudentSchedule,
 } from '../../lib/utils/date-utils';
 import { WEEKDAYS } from '../../components/print/schedule-dialog';
 import type { StudentWithCourses, ScheduleConfig } from '../../types/database';
@@ -267,6 +269,56 @@ describe('Milestone 4: Sheet Geometry & Structure Specifications', () => {
     expect(frente['P5']?.v).toBe('27/05/2027');
     expect(frente['A10']?.v).toBe('1. Introdução à Informática');
   });
+
+  it('permite colar datas brasileiras flexíveis (parseFlexibleDate) e converte ano de 2 dígitos', () => {
+    // Casos solicitados pelo usuário (ex: colar 02/11/26 sem digitar dia, mês e ano)
+    expect(parseFlexibleDate('02/11/26')).toBe('2026-11-02');
+    expect(parseFlexibleDate('02/11/2026')).toBe('2026-11-02');
+    expect(parseFlexibleDate('2/11/26')).toBe('2026-11-02');
+    expect(parseFlexibleDate('02-11-26')).toBe('2026-11-02');
+    expect(parseFlexibleDate('02.11.26')).toBe('2026-11-02');
+    expect(parseFlexibleDate('021126')).toBe('2026-11-02');
+    expect(parseFlexibleDate('02112026')).toBe('2026-11-02');
+    expect(parseFlexibleDate('15/03/99')).toBe('1999-03-15');
+    expect(parseFlexibleDate('2026-11-02')).toBe('2026-11-02');
+    expect(parseFlexibleDate('')).toBeNull();
+    expect(parseFlexibleDate('-')).toBeNull();
+  });
+
+  it('extrai automaticamente os horários cadastrados do aluno para o diálogo de impressão (parseStudentSchedule)', () => {
+    // Aluna como Alexia Valentina (com JSON gravado no dia_semana)
+    const alunoAlexia = {
+      matricula: '4954958',
+      nome: 'Alexia Valentina de Assis Silva',
+      dia_semana: JSON.stringify({
+        'Terça-feira': { inicio: '08h00', fim: '10h00' },
+      }),
+      horario_inicio: '08h00',
+      horario_fim: '10h00',
+    };
+
+    const configAlexia = parseStudentSchedule(alunoAlexia);
+    expect(configAlexia.diasConfig['Terça-feira']).toBeDefined();
+    expect(configAlexia.diasConfig['Terça-feira'].inicio).toBe('08h00');
+    expect(configAlexia.diasConfig['Terça-feira'].fim).toBe('10h00');
+    expect(configAlexia.diasSemana).toContain('Terça-feira');
+
+    // Aluno com string de texto clássica
+    const alunoTexto = {
+      matricula: '123456',
+      nome: 'Aluno Teste',
+      dia_semana: 'Segunda e Quarta 14h00 às 16h00',
+      horario_inicio: null,
+      horario_fim: null,
+    };
+
+    const configTexto = parseStudentSchedule(alunoTexto);
+    expect(configTexto.diasSemana).toContain('Segunda-feira');
+    expect(configTexto.diasSemana).toContain('Quarta-feira');
+    expect(configTexto.diasConfig['Segunda-feira'].inicio).toBe('14h00');
+    expect(configTexto.diasConfig['Segunda-feira'].fim).toBe('16h00');
+  });
 });
+
 
 

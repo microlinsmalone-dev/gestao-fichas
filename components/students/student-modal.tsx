@@ -23,7 +23,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { CourseSelector, type SelectedCourse } from '../courses/course-selector';
-import { toInputDate, formatTime } from '../../lib/utils/date-utils';
+import { toInputDate, formatTime, handleDatePaste } from '../../lib/utils/date-utils';
 import type { StudentWithCourses, FichaInsert } from '../../types/database';
 
 interface StudentModalProps {
@@ -335,23 +335,23 @@ export function StudentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-2xl max-w-6xl w-full max-h-[94vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden transform animate-in zoom-in-95 duration-150"
+        className="bg-[#242424] rounded-2xl max-w-6xl w-full max-h-[94vh] flex flex-col shadow-2xl border border-slate-700 overflow-hidden transform animate-in zoom-in-95 duration-150 text-white"
         role="dialog"
         aria-modal="true"
       >
         {/* Cabeçalho do Modal */}
-        <div className="px-6 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-6 py-3.5 border-b border-slate-700/80 flex items-center justify-between bg-[#1e1e1e]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0f3b7d] flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-[#1f6aa5]/25 text-[#38bdf8] flex items-center justify-center font-bold">
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 leading-tight">
+              <h3 className="text-base font-bold text-white leading-tight">
                 {isEditing ? `Editar Aluno: ${student?.nome}` : 'Cadastrar Novo Aluno'}
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-400">
                 {isEditing ? `Matrícula: ${student?.matricula}` : 'Preencha os dados cadastrais e o ciclo pedagógico'}
               </p>
             </div>
@@ -359,7 +359,7 @@ export function StudentModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
             title="Fechar formulário"
           >
             <X className="w-5 h-5" />
@@ -367,14 +367,14 @@ export function StudentModal({
         </div>
 
         {/* Abas Principais em 2 Etapas Ágeis (img2 e img3) */}
-        <div className="flex border-b border-slate-100 px-6 bg-white gap-3">
+        <div className="flex border-b border-slate-700/80 px-6 bg-[#1e1e1e] gap-3">
           <button
             type="button"
             onClick={() => setActiveStep('dados')}
             className={`py-3 px-3 text-xs font-bold border-b-2 flex items-center gap-2 transition-all ${
               activeStep === 'dados'
-                ? 'border-[#0f3b7d] text-[#0f3b7d]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-[#1f6aa5] text-[#38bdf8]'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <User className="w-4 h-4" />
@@ -386,8 +386,8 @@ export function StudentModal({
             onClick={() => setActiveStep('cursos')}
             className={`py-3 px-3 text-xs font-bold border-b-2 flex items-center gap-2 transition-all ${
               activeStep === 'cursos'
-                ? 'border-[#0f3b7d] text-[#0f3b7d]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-[#1f6aa5] text-[#38bdf8]'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <BookOpen className="w-4 h-4" />
@@ -397,31 +397,31 @@ export function StudentModal({
 
         {/* Mensagem de Erro Geral */}
         {errorMessage && (
-          <div className="mx-6 mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-700 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+          <div className="mx-6 mt-3 p-3 rounded-xl bg-rose-950/50 border border-rose-800/60 flex items-start gap-2.5 text-xs text-rose-300 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {/* Corpo do Formulário com Scroll Suave */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 bg-[#242424]">
           {/* ============================================================== */}
           {/* TELA 1: DADOS CADASTRAIS & CICLO PEDAGÓGICO (ESTILO IMG2)       */}
           {/* ============================================================== */}
           {activeStep === 'dados' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in">
               {/* --- COLUNA 1: DADOS PESSOAIS DO ALUNO --- */}
-              <div className="space-y-3.5 bg-slate-50/50 p-4 rounded-2xl border border-slate-200/80">
-                <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60">
-                  <User className="w-4 h-4 text-[#0f3b7d]" />
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+              <div className="space-y-3.5 bg-[#1c1c1c] p-4 rounded-2xl border border-slate-700/70">
+                <div className="flex items-center gap-1.5 pb-1 border-b border-slate-700/60">
+                  <User className="w-4 h-4 text-[#38bdf8]" />
+                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wide">
                     Identificação do Aluno
                   </h4>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    N° MATRÍCULA <span className="text-rose-500">*</span>
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                    N° MATRÍCULA <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -430,13 +430,13 @@ export function StudentModal({
                     value={matricula}
                     onChange={(e) => setMatricula(e.target.value)}
                     placeholder="Ex: 5135887"
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] font-mono bg-white font-semibold"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] font-mono bg-[#2b2b2b] text-white font-semibold"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    NOME COMPLETO <span className="text-rose-500">*</span>
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                    NOME COMPLETO <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -445,12 +445,12 @@ export function StudentModal({
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     placeholder="Ex: MIGUEL ALEXANDRE BRAGA LEITE"
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white font-medium"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     E-MAIL
                   </label>
                   <input
@@ -459,12 +459,12 @@ export function StudentModal({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="aluno@exemplo.com"
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white placeholder-slate-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     DATA DE NASCIMENTO
                   </label>
                   <input
@@ -472,12 +472,13 @@ export function StudentModal({
                     tabIndex={4}
                     value={dataNascimento}
                     onChange={(e) => setDataNascimento(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                    onPaste={(e) => handleDatePaste(e, setDataNascimento)}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     TELEFONE / CELULAR
                   </label>
                   <input
@@ -486,12 +487,12 @@ export function StudentModal({
                     value={telefone}
                     onChange={(e) => setTelefone(e.target.value)}
                     placeholder="(17) 99185-9001"
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white placeholder-slate-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     INSTRUTOR PEDAGÓGICO
                   </label>
                   <input
@@ -500,7 +501,7 @@ export function StudentModal({
                     value={instrutor}
                     onChange={(e) => setInstrutor(e.target.value)}
                     placeholder="Ex: Pyetra Alves"
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white placeholder-slate-500"
                   />
                 </div>
 
@@ -510,18 +511,18 @@ export function StudentModal({
                     type="button"
                     tabIndex={7}
                     onClick={() => setIsScheduleOpen(true)}
-                    className="w-full py-2 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-[#0f3b7d] text-slate-800 text-xs font-semibold flex items-center justify-between transition-all shadow-2xs group"
+                    className="w-full py-2 px-3 rounded-xl border border-slate-600 bg-[#2b2b2b] hover:bg-[#333333] hover:border-[#1f6aa5] text-slate-200 text-xs font-semibold flex items-center justify-between transition-all shadow-2xs group"
                   >
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#0f3b7d]" />
+                      <Clock className="w-4 h-4 text-[#38bdf8]" />
                       <span>Agendamento Múltiplo</span>
                     </div>
                     {activeDaysList.length > 0 ? (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-700/60 px-2 py-0.5 rounded-full">
                         {activeDaysList.length} dia(s) configurado(s)
                       </span>
                     ) : (
-                      <span className="text-[11px] text-slate-400 group-hover:text-[#0f3b7d]">
+                      <span className="text-[11px] text-slate-400 group-hover:text-[#38bdf8]">
                         Definir horários →
                       </span>
                     )}
@@ -530,16 +531,16 @@ export function StudentModal({
               </div>
 
               {/* --- COLUNA 2: CICLO PEDAGÓGICO - VIGÊNCIA & FORMS --- */}
-              <div className="space-y-3.5 bg-slate-50/50 p-4 rounded-2xl border border-slate-200/80">
-                <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60">
-                  <Calendar className="w-4 h-4 text-[#0f3b7d]" />
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+              <div className="space-y-3.5 bg-[#1c1c1c] p-4 rounded-2xl border border-slate-700/70">
+                <div className="flex items-center gap-1.5 pb-1 border-b border-slate-700/60">
+                  <Calendar className="w-4 h-4 text-[#38bdf8]" />
+                  <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wide">
                     Ciclo Pedagógico (Parte 1)
                   </h4>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     DATA INÍCIO CURSO
                   </label>
                   <input
@@ -547,12 +548,13 @@ export function StudentModal({
                     tabIndex={8}
                     value={dataInicioCurso}
                     onChange={(e) => setDataInicioCurso(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white font-medium"
+                    onPaste={(e) => handleDatePaste(e, setDataInicioCurso)}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark] font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     DATA TÉRMINO CURSO
                   </label>
                   <input
@@ -560,12 +562,13 @@ export function StudentModal({
                     tabIndex={9}
                     value={dataTerminoCurso}
                     onChange={(e) => setDataTerminoCurso(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white font-medium"
+                    onPaste={(e) => handleDatePaste(e, setDataTerminoCurso)}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark] font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     DATA LINHA DA VIDA
                   </label>
                   <input
@@ -573,12 +576,13 @@ export function StudentModal({
                     tabIndex={10}
                     value={dataLinhaVida}
                     onChange={(e) => setDataLinhaVida(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                    onPaste={(e) => handleDatePaste(e, setDataLinhaVida)}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     DATA FORM 1
                   </label>
                   <input
@@ -586,12 +590,13 @@ export function StudentModal({
                     tabIndex={11}
                     value={dataForm1}
                     onChange={(e) => setDataForm1(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                    onPaste={(e) => handleDatePaste(e, setDataForm1)}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     DATA FORM 2
                   </label>
                   <input
@@ -599,12 +604,13 @@ export function StudentModal({
                     tabIndex={12}
                     value={dataForm2}
                     onChange={(e) => setDataForm2(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                    onPaste={(e) => handleDatePaste(e, setDataForm2)}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-300 mb-1">
                     DATA DREAMDAY
                   </label>
                   <input
@@ -612,23 +618,24 @@ export function StudentModal({
                     tabIndex={13}
                     value={dataDreamday}
                     onChange={(e) => setDataDreamday(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                    onPaste={(e) => handleDatePaste(e, setDataDreamday)}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark]"
                   />
                 </div>
               </div>
 
               {/* --- COLUNA 3: FECHAMENTOS & AÇÕES RÁPIDAS --- */}
-              <div className="space-y-3.5 bg-slate-50/50 p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between">
+              <div className="space-y-3.5 bg-[#1c1c1c] p-4 rounded-2xl border border-slate-700/70 flex flex-col justify-between">
                 <div className="space-y-3.5">
-                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60">
-                    <Calendar className="w-4 h-4 text-[#0f3b7d]" />
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-700/60">
+                    <Calendar className="w-4 h-4 text-[#38bdf8]" />
+                    <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wide">
                       Fechamentos de Ciclo
                     </h4>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
                       DATA FECHAMENTO 1
                     </label>
                     <input
@@ -636,12 +643,13 @@ export function StudentModal({
                       tabIndex={14}
                       value={dataFechamento1}
                       onChange={(e) => setDataFechamento1(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                      onPaste={(e) => handleDatePaste(e, setDataFechamento1)}
+                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
                       DATA FECHAMENTO 2
                     </label>
                     <input
@@ -649,12 +657,13 @@ export function StudentModal({
                       tabIndex={15}
                       value={dataFechamento2}
                       onChange={(e) => setDataFechamento2(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                      onPaste={(e) => handleDatePaste(e, setDataFechamento2)}
+                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-300 mb-1">
                       DATA FECHAMENTO 3
                     </label>
                     <input
@@ -662,13 +671,14 @@ export function StudentModal({
                       tabIndex={16}
                       value={dataFechamento3}
                       onChange={(e) => setDataFechamento3(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 focus:border-[#0f3b7d] bg-white"
+                      onPaste={(e) => handleDatePaste(e, setDataFechamento3)}
+                      className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-600 focus:outline-none focus:ring-1 focus:ring-[#1f6aa5] focus:border-[#1f6aa5] bg-[#2b2b2b] text-white [color-scheme:dark]"
                     />
                   </div>
                 </div>
 
                 {/* Bloco de Ações Rápidas */}
-                <div className="pt-3 border-t border-slate-200/80 space-y-2">
+                <div className="pt-3 border-t border-slate-700/80 space-y-2">
                   <button
                     type="button"
                     onClick={() => setActiveStep('cursos')}
@@ -682,7 +692,7 @@ export function StudentModal({
                     <button
                       type="button"
                       onClick={handleClearDates}
-                      className="flex-1 py-1.5 px-2 rounded-xl text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center justify-center gap-1"
+                      className="flex-1 py-1.5 px-2 rounded-xl text-[11px] font-semibold text-rose-300 bg-rose-950/40 hover:bg-rose-900/40 border border-rose-800/50 transition-colors flex items-center justify-center gap-1"
                     >
                       <RotateCcw className="w-3 h-3" />
                       <span>Limpar Datas</span>
@@ -708,8 +718,8 @@ export function StudentModal({
         </div>
 
         {/* Rodapé com Navegação e Botão de Salvar */}
-        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          <div className="text-xs font-medium text-slate-500">
+        <div className="px-6 py-3.5 bg-[#1e1e1e] border-t border-slate-700/80 flex items-center justify-between">
+          <div className="text-xs font-medium text-slate-400">
             {activeStep === 'dados'
               ? 'Passo 1 de 2: Dados Cadastrais'
               : 'Passo 2 de 2: Cursos Contratados'}
@@ -720,7 +730,7 @@ export function StudentModal({
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-all"
+              className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all"
             >
               Cancelar
             </button>
@@ -729,7 +739,7 @@ export function StudentModal({
               <button
                 type="button"
                 onClick={() => setActiveStep('dados')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-200/80 hover:bg-slate-300 rounded-xl transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-200 bg-[#2a2a2a] hover:bg-[#333333] border border-slate-700 rounded-xl transition-all"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Voltar</span>
@@ -738,7 +748,7 @@ export function StudentModal({
               <button
                 type="button"
                 onClick={() => setActiveStep('cursos')}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-200/80 hover:bg-slate-300 rounded-xl transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-200 bg-[#2a2a2a] hover:bg-[#333333] border border-slate-700 rounded-xl transition-all"
               >
                 <span>Próximo</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -749,7 +759,7 @@ export function StudentModal({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleSubmit()}
-              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-[#0f3b7d] hover:bg-[#0a2e68] rounded-xl shadow-xs transition-all disabled:opacity-60"
+              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-[#1f6aa5] hover:bg-[#154f78] rounded-xl shadow-xs transition-all disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>

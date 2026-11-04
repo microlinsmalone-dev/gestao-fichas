@@ -4,6 +4,7 @@
 // SISTEMA DE GESTÃO DE FICHAS PEDAGÓGICAS - MICROLINS
 // Page: app/cursos/page.tsx
 // Consulta e gestão do catálogo de cursos institucionais Microlins
+// Estilo: Dark Moderno com Azul (#1f6aa5 / #242424)
 // ==============================================================================
 
 import React, { useState, useMemo } from 'react';
@@ -99,36 +100,22 @@ export default function CursosPage() {
       return;
     }
 
-    const duplicate = courses.some(
-      (c) => c.id !== cursoId && normalizeText(c.nome) === normalizeText(cleanName)
-    );
-    if (duplicate) {
-      showAlert('Já existe outro módulo com esse nome no catálogo.', 'warning', 'Nome Duplicado');
-      return;
-    }
-
     try {
       setIsSavingEdit(true);
-
-      // Atualiza tabela cursos
-      const { error: cErr } = await supabase
+      const { error } = await supabase
         .from('cursos')
-        .update({ nome: cleanName, updated_at: new Date().toISOString() })
+        .update({ nome: cleanName })
         .eq('id', cursoId);
-      if (cErr) throw new Error(cErr.message);
 
-      // Sincroniza em fichas_cursos para manter a integridade visual das fichas existentes
-      await supabase
-        .from('fichas_cursos')
-        .update({ curso_nome: cleanName })
-        .eq('curso_id', cursoId);
+      if (error) throw new Error(error.message);
 
+      setEditingCourseId(null);
+      setEditingCourseName('');
       await refreshCourses();
-      showToast(`Módulo atualizado para "${cleanName}"!`, 'success');
-      cancelEditCourse();
+      showToast(`Módulo atualizado para "${cleanName}" com sucesso!`, 'success');
     } catch (err) {
       showAlert(
-        err instanceof Error ? err.message : 'Falha ao atualizar o módulo.',
+        err instanceof Error ? err.message : 'Falha ao renomear o módulo.',
         'error',
         'Erro ao Salvar'
       );
@@ -137,13 +124,12 @@ export default function CursosPage() {
     }
   };
 
-  // Excluir módulo (com desvinculação automática de alunos se confirmado)
+  // Apagar curso do catálogo (desvinculando alunos primeiro se necessário)
   const handleDeleteCourse = async (curso: Curso) => {
     try {
-      // Verifica se existem alunos com este curso vinculado
       const { count, error } = await supabase
         .from('fichas_cursos')
-        .select('id', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true })
         .eq('curso_id', curso.id);
 
       if (error) {
@@ -210,22 +196,22 @@ export default function CursosPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 text-slate-100">
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors shadow-2xs"
+            className="p-2 rounded-xl bg-[#2e2e2e] border border-[#444444] text-slate-300 hover:text-white hover:bg-[#383838] transition-colors shadow-xs"
             title="Voltar para Alunos"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">
+            <h1 className="text-xl font-bold text-white">
               Catálogo de Cursos
             </h1>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-400">
               Cursos e módulos oficiais disponíveis para alocação nas fichas pedagógicas
             </p>
           </div>
@@ -234,7 +220,7 @@ export default function CursosPage() {
         <button
           type="button"
           onClick={() => setIsAdding(!isAdding)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#0f3b7d] hover:bg-[#0a2e68] transition-all shadow-xs"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-[#1f6aa5] hover:bg-[#1a5c8e] border border-[#2b82c4] transition-all shadow-md"
         >
           <Plus className="w-4 h-4" />
           <span>Novo Curso</span>
@@ -245,17 +231,17 @@ export default function CursosPage() {
       {isAdding && (
         <form
           onSubmit={handleAddCourse}
-          className="bg-white rounded-2xl border border-blue-200 p-5 shadow-sm space-y-3 animate-in fade-in duration-150"
+          className="bg-[#242424] rounded-2xl border border-[#333333] p-5 shadow-md space-y-3 animate-in fade-in duration-150"
         >
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#0f3b7d]" />
+            <h3 className="text-xs font-bold text-white uppercase tracking-wide flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#38bdf8]" />
               Adicionar Curso ao Catálogo Institucional
             </h3>
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="text-xs text-slate-400 hover:text-slate-600"
+              className="text-xs text-slate-400 hover:text-white"
             >
               Cancelar
             </button>
@@ -266,14 +252,14 @@ export default function CursosPage() {
               value={newCourseName}
               onChange={(e) => setNewCourseName(e.target.value)}
               placeholder="Digite o nome do curso (ex: Inteligência Artificial na Prática)..."
-              className="flex-1 px-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-[#0f3b7d] focus:border-transparent"
+              className="flex-1 px-4 py-2 text-xs rounded-xl bg-[#2e2e2e] border border-[#444444] text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1f6aa5]/40 focus:border-[#1f6aa5]"
               autoFocus
               disabled={submitting}
             />
             <button
               type="submit"
               disabled={submitting || !newCourseName.trim()}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#0f3b7d] hover:bg-[#0a2e68] disabled:opacity-50 transition-all shadow-xs"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#1f6aa5] hover:bg-[#1a5c8e] border border-[#2b82c4] disabled:opacity-50 transition-all shadow-md"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               <span>Cadastrar Curso</span>
@@ -291,27 +277,27 @@ export default function CursosPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar por nome do curso..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-[#0f3b7d] focus:border-transparent shadow-2xs"
+            className="w-full pl-10 pr-4 py-2.5 bg-[#242424] border border-[#333333] rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1f6aa5]/40 focus:border-[#1f6aa5] shadow-xs"
           />
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-xl px-4 py-2.5 flex items-center justify-between text-xs text-slate-600 shadow-2xs">
+        <div className="bg-[#242424] border border-[#333333] rounded-xl px-4 py-2.5 flex items-center justify-between text-xs text-slate-300 shadow-xs">
           <span>Total cadastrados:</span>
-          <span className="font-bold text-[#0f3b7d]">{courses.length} cursos</span>
+          <span className="font-bold text-[#38bdf8]">{courses.length} cursos</span>
         </div>
       </div>
 
       {/* Grid de Cursos */}
       {loading ? (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center">
-          <Loader2 className="w-8 h-8 text-[#0f3b7d] animate-spin mx-auto mb-3" />
-          <p className="text-xs font-semibold text-slate-500">Carregando catálogo de cursos...</p>
+        <div className="bg-[#242424] rounded-2xl border border-[#333333] p-12 text-center">
+          <Loader2 className="w-8 h-8 text-[#1f6aa5] animate-spin mx-auto mb-3" />
+          <p className="text-xs font-semibold text-slate-400">Carregando catálogo de cursos...</p>
         </div>
       ) : filteredCourses.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-3">
-          <BookOpen className="w-8 h-8 text-slate-400 mx-auto" />
-          <h3 className="text-sm font-bold text-slate-700">Nenhum curso encontrado</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+        <div className="bg-[#242424] rounded-2xl border border-[#333333] p-12 text-center space-y-3">
+          <BookOpen className="w-8 h-8 text-slate-500 mx-auto" />
+          <h3 className="text-sm font-bold text-white">Nenhum curso encontrado</h3>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
             Não encontramos nenhum curso com o termo &quot;{searchTerm}&quot;. Tente outro filtro ou cadastre um novo curso.
           </p>
         </div>
@@ -323,15 +309,15 @@ export default function CursosPage() {
             return (
               <div
                 key={curso.id}
-                className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-2xs hover:border-blue-300 hover:shadow-xs transition-all flex flex-col justify-between"
+                className="bg-[#242424] rounded-xl border border-[#333333] p-4 shadow-xs hover:border-[#1f6aa5]/60 transition-all flex flex-col justify-between"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 font-mono">
+                    <span className="text-[10px] font-bold text-slate-500 font-mono">
                       #{idx + 1}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                       Ativo
                     </span>
                   </div>
@@ -352,7 +338,7 @@ export default function CursosPage() {
                         }}
                         autoFocus
                         disabled={isSavingEdit}
-                        className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-400 focus:outline-none focus:ring-2 focus:ring-[#0f3b7d]/20 text-slate-900"
+                        className="w-full px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-[#2e2e2e] border border-[#1f6aa5] focus:outline-none focus:ring-2 focus:ring-[#1f6aa5]/40 text-white"
                         placeholder="Nome do módulo..."
                       />
                       <div className="flex items-center gap-1.5 justify-end">
@@ -360,7 +346,7 @@ export default function CursosPage() {
                           type="button"
                           onClick={cancelEditCourse}
                           disabled={isSavingEdit}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white hover:bg-[#333333] transition-colors"
                         >
                           <X className="w-3 h-3" />
                           <span>Cancelar</span>
@@ -369,7 +355,7 @@ export default function CursosPage() {
                           type="button"
                           onClick={() => handleSaveEditCourse(curso.id)}
                           disabled={isSavingEdit || !editingCourseName.trim()}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[11px] font-bold text-white bg-[#0f3b7d] hover:bg-[#0a2e68] transition-colors disabled:opacity-50"
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[11px] font-bold text-white bg-[#1f6aa5] hover:bg-[#1a5c8e] border border-[#2b82c4] transition-colors disabled:opacity-50"
                         >
                           {isSavingEdit ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -381,7 +367,7 @@ export default function CursosPage() {
                       </div>
                     </div>
                   ) : (
-                    <h3 className="text-xs font-bold text-slate-900 leading-snug">
+                    <h3 className="text-xs font-bold text-white leading-snug">
                       {curso.nome}
                     </h3>
                   )}
@@ -389,11 +375,11 @@ export default function CursosPage() {
 
                 {/* Ações do Módulo (Editar / Apagar) */}
                 {!isEditing && (
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-1.5">
+                  <div className="mt-4 pt-3 border-t border-[#333333] flex items-center justify-end gap-1.5">
                     <button
                       type="button"
                       onClick={() => startEditCourse(curso)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-600 hover:text-[#0f3b7d] hover:bg-blue-50 transition-colors"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-300 hover:text-[#38bdf8] hover:bg-[#1f6aa5]/20 transition-colors"
                       title="Editar nome deste módulo"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -402,7 +388,7 @@ export default function CursosPage() {
                     <button
                       type="button"
                       onClick={() => handleDeleteCourse(curso)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
                       title="Excluir este módulo do catálogo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="flex min-h-screen bg-[#f8fafd] text-slate-900 antialiased font-sans">
+      <body className="flex min-h-screen bg-[#18181b] text-slate-100 antialiased font-sans">
         <DialogProvider>
           {/* Sidebar - Desktop */}
           <Sidebar />
