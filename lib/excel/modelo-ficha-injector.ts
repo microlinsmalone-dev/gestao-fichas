@@ -8,6 +8,7 @@
 
 import type { StudentWithCourses, ScheduleConfig } from '../../types/database';
 import { MODELO_FICHA_XLSX_BASE64 } from '../constants/modelo-ficha-assets';
+import { formatTime } from '../utils/date-utils';
 
 function base64ToUint8Array(b64: string): Uint8Array {
   if (typeof Buffer !== 'undefined') {
@@ -59,6 +60,16 @@ export function formatSheetPhone(phone: string | null | undefined): string {
   return phone;
 }
 
+function cleanTimeOrH(val: string | null | undefined): string {
+  if (!val) return 'h';
+  const clean = val.trim();
+  if (!clean || clean.toLowerCase() === 'h' || clean.toLowerCase() === 'none' || clean.toLowerCase() === 'null' || clean === '-' || clean === '—') {
+    return 'h';
+  }
+  const formatted = formatTime(clean);
+  return formatted || 'h';
+}
+
 export function resolveStudentDaySchedule(
   student: StudentWithCourses,
   propSchedule?: ScheduleConfig,
@@ -68,9 +79,21 @@ export function resolveStudentDaySchedule(
 
   // 1. Verifica configuração detalhada por dia no ScheduleConfig do modal
   if (propSchedule?.diasConfig) {
-    if (propSchedule.diasConfig[dayShort]) return propSchedule.diasConfig[dayShort];
+    if (propSchedule.diasConfig[dayShort]) {
+      const cfg = propSchedule.diasConfig[dayShort];
+      return {
+        inicio: cleanTimeOrH(cfg.inicio),
+        fim: cleanTimeOrH(cfg.fim),
+      };
+    }
     const fullName = `${dayShort}-feira`;
-    if (propSchedule.diasConfig[fullName]) return propSchedule.diasConfig[fullName];
+    if (propSchedule.diasConfig[fullName]) {
+      const cfg = propSchedule.diasConfig[fullName];
+      return {
+        inicio: cleanTimeOrH(cfg.inicio),
+        fim: cleanTimeOrH(cfg.fim),
+      };
+    }
   }
 
   // 2. Verifica dias selecionados no modal de impressão (ScheduleConfig)
@@ -81,8 +104,8 @@ export function resolveStudentDaySchedule(
     );
     if (active) {
       return {
-        inicio: propSchedule.horarioInicio || 'h',
-        fim: propSchedule.horarioFim || 'h',
+        inicio: cleanTimeOrH(propSchedule.horarioInicio),
+        fim: cleanTimeOrH(propSchedule.horarioFim),
       };
     }
   }
@@ -92,9 +115,19 @@ export function resolveStudentDaySchedule(
     if (student.dia_semana.startsWith('{')) {
       try {
         const parsed = JSON.parse(student.dia_semana);
-        if (parsed[dayShort]) return parsed[dayShort];
+        if (parsed[dayShort]) {
+          return {
+            inicio: cleanTimeOrH(parsed[dayShort].inicio),
+            fim: cleanTimeOrH(parsed[dayShort].fim),
+          };
+        }
         const fullName = `${dayShort}-feira`;
-        if (parsed[fullName]) return parsed[fullName];
+        if (parsed[fullName]) {
+          return {
+            inicio: cleanTimeOrH(parsed[fullName].inicio),
+            fim: cleanTimeOrH(parsed[fullName].fim),
+          };
+        }
       } catch {}
     }
 
@@ -105,8 +138,8 @@ export function resolveStudentDaySchedule(
     );
     if (active) {
       return {
-        inicio: student.horario_inicio || 'h',
-        fim: student.horario_fim || 'h',
+        inicio: cleanTimeOrH(student.horario_inicio),
+        fim: cleanTimeOrH(student.horario_fim),
       };
     }
   }

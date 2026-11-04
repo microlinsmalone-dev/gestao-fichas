@@ -81,12 +81,12 @@ export function formatPhoneForSheet(phone: string | null | undefined): string {
 }
 
 /**
- * Normaliza horário para formato institucional (ex: '14' -> '14h00', '14:30' -> '14h30', '8' -> '08h00')
+ * Normaliza horário para formato institucional (ex: '19' -> '19h00', '19:30' -> '19h30', '19h30' -> '19h30', '1930' -> '19h30', '8' -> '08h00')
  */
 export function formatTime(t: string | null | undefined): string {
   if (!t) return '';
-  const clean = String(t).trim().toLowerCase().replace(':', 'h');
-  if (!clean || clean === 'none' || clean === 'null' || clean === '-') return '';
+  const clean = String(t).trim().toLowerCase().replace(/[:.,]/g, 'h');
+  if (!clean || clean === 'none' || clean === 'null' || clean === '-' || clean === '—' || clean === 'h') return '';
   if (/^\d+$/.test(clean)) {
     if (clean.length <= 2) {
       return `${clean.padStart(2, '0')}h00`;

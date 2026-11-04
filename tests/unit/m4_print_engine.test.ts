@@ -16,6 +16,14 @@ import type { StudentWithCourses, ScheduleConfig } from '../../types/database';
 
 describe('Milestone 4: Print Engine Utilities & Time Normalization', () => {
   it('normaliza horários em formatos variados para o padrão institucional (XXhYY)', () => {
+    // Casos solicitados pelo usuário (somente números, com dois pontos, com 'h' ou decimais)
+    expect(formatTime('19')).toBe('19h00');
+    expect(formatTime('19:30')).toBe('19h30');
+    expect(formatTime('19h30')).toBe('19h30');
+    expect(formatTime('1930')).toBe('19h30');
+    expect(formatTime('19h')).toBe('19h00');
+    expect(formatTime('19.30')).toBe('19h30');
+    expect(formatTime('19,30')).toBe('19h30');
     expect(formatTime('14')).toBe('14h00');
     expect(formatTime('14:00')).toBe('14h00');
     expect(formatTime('1400')).toBe('14h00');
@@ -26,6 +34,32 @@ describe('Milestone 4: Print Engine Utilities & Time Normalization', () => {
     expect(formatTime('800')).toBe('08h00');
     expect(formatTime('08:00')).toBe('08h00');
     expect(formatTime('19:15')).toBe('19h15');
+    expect(formatTime('8:30')).toBe('08h30');
+    expect(formatTime('830')).toBe('08h30');
+  });
+
+  it('normaliza horários na resolução de grade da ficha (resolveStudentDaySchedule)', async () => {
+    const { resolveStudentDaySchedule } = await import('../../lib/excel/modelo-ficha-injector');
+    const mockStudentWithRawHours: any = {
+      matricula: '123',
+      nome: 'Teste',
+      dia_semana: JSON.stringify({
+        'Segunda-feira': { inicio: '19', fim: '21' },
+        'Quarta-feira': { inicio: '19:30', fim: '21h30' },
+      }),
+    };
+
+    const seg = resolveStudentDaySchedule(mockStudentWithRawHours, undefined, 'Segunda');
+    expect(seg.inicio).toBe('19h00');
+    expect(seg.fim).toBe('21h00');
+
+    const qua = resolveStudentDaySchedule(mockStudentWithRawHours, undefined, 'Quarta');
+    expect(qua.inicio).toBe('19h30');
+    expect(qua.fim).toBe('21h30');
+
+    const sex = resolveStudentDaySchedule(mockStudentWithRawHours, undefined, 'Sexta');
+    expect(sex.inicio).toBe('h');
+    expect(sex.fim).toBe('h');
   });
 
   it('retorna string vazia para horários nulos, vazios ou inválidos', () => {

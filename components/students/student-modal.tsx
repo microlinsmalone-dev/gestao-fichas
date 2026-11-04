@@ -23,7 +23,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { CourseSelector, type SelectedCourse } from '../courses/course-selector';
-import { toInputDate } from '../../lib/utils/date-utils';
+import { toInputDate, formatTime } from '../../lib/utils/date-utils';
 import type { StudentWithCourses, FichaInsert } from '../../types/database';
 
 interface StudentModalProps {
@@ -137,16 +137,16 @@ export function StudentModal({
             WEEKDAYS.forEach((d) => {
               if (obj[d]) {
                 parsed[d] = {
-                  inicio: obj[d].inicio || '',
-                  fim: obj[d].fim || '',
+                  inicio: formatTime(obj[d].inicio || ''),
+                  fim: formatTime(obj[d].fim || ''),
                 };
               }
             });
           } catch {}
         } else if (student.dia_semana) {
           const raw = student.dia_semana.toLowerCase();
-          const ini = student.horario_inicio || '14h00';
-          const fim = student.horario_fim || '16h00';
+          const ini = formatTime(student.horario_inicio) || '14h00';
+          const fim = formatTime(student.horario_fim) || '16h00';
           if (raw.includes('seg')) parsed['Segunda-feira'] = { inicio: ini, fim };
           if (raw.includes('ter')) parsed['Terça-feira'] = { inicio: ini, fim };
           if (raw.includes('qua')) parsed['Quarta-feira'] = { inicio: ini, fim };
@@ -222,6 +222,34 @@ export function StudentModal({
     setDataFechamento3('');
   };
 
+  const handleScheduleBlur = (dia: Weekday, field: 'inicio' | 'fim') => {
+    setSchedules((prev) => {
+      const raw = prev[dia][field];
+      if (!raw) return prev;
+      return {
+        ...prev,
+        [dia]: {
+          ...prev[dia],
+          [field]: formatTime(raw),
+        },
+      };
+    });
+  };
+
+  const handleConfirmScheduleModal = () => {
+    setSchedules((prev) => {
+      const next: Record<Weekday, DaySchedule> = { ...DEFAULT_SCHEDULE };
+      WEEKDAYS.forEach((d) => {
+        next[d] = {
+          inicio: formatTime(prev[d].inicio),
+          fim: formatTime(prev[d].fim),
+        };
+      });
+      return next;
+    });
+    setIsScheduleOpen(false);
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage(null);
@@ -259,13 +287,13 @@ export function StudentModal({
       const scheduleMap: Record<string, { inicio: string; fim: string }> = {};
       activeDaysList.forEach((d) => {
         scheduleMap[d] = {
-          inicio: schedules[d].inicio.trim(),
-          fim: schedules[d].fim.trim(),
+          inicio: formatTime(schedules[d].inicio),
+          fim: formatTime(schedules[d].fim),
         };
       });
       diaSemanaPayload = JSON.stringify(scheduleMap);
-      horarioInicioPayload = schedules[activeDaysList[0]].inicio.trim() || null;
-      horarioFimPayload = schedules[activeDaysList[0]].fim.trim() || null;
+      horarioInicioPayload = formatTime(schedules[activeDaysList[0]].inicio) || null;
+      horarioFimPayload = formatTime(schedules[activeDaysList[0]].fim) || null;
     }
 
     const payload: FichaInsert = {
@@ -789,6 +817,7 @@ export function StudentModal({
                         [dia]: { ...prev[dia], inicio: e.target.value },
                       }))
                     }
+                    onBlur={() => handleScheduleBlur(dia, 'inicio')}
                     placeholder="14h00"
                     className="w-20 px-2 py-1 bg-[#333333] border border-slate-600 rounded-lg text-white text-center text-xs focus:outline-none focus:border-blue-400 font-mono"
                   />
@@ -802,6 +831,7 @@ export function StudentModal({
                         [dia]: { ...prev[dia], fim: e.target.value },
                       }))
                     }
+                    onBlur={() => handleScheduleBlur(dia, 'fim')}
                     placeholder="16h00"
                     className="w-20 px-2 py-1 bg-[#333333] border border-slate-600 rounded-lg text-white text-center text-xs focus:outline-none focus:border-blue-400 font-mono"
                   />
@@ -813,7 +843,7 @@ export function StudentModal({
             <div className="pt-2 flex justify-center">
               <button
                 type="button"
-                onClick={() => setIsScheduleOpen(false)}
+                onClick={handleConfirmScheduleModal}
                 className="w-44 py-2 px-4 rounded-xl text-xs font-bold text-white bg-[#1f6aa5] hover:bg-[#154f78] transition-colors shadow-sm"
               >
                 Confirmar
