@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { CourseSelector, type SelectedCourse } from '../courses/course-selector';
 import { toInputDate, formatTime, handleDatePaste } from '../../lib/utils/date-utils';
+import { useModalUx } from '../../lib/hooks/use-modal-ux';
 import type { StudentWithCourses, FichaInsert } from '../../types/database';
 
 interface StudentModalProps {
@@ -207,10 +208,53 @@ export function StudentModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   });
 
+  // Gerenciamento de ESC, backdrop click e bloqueio de rolagem do body
+  const { handleBackdropClick } = useModalUx({
+    isOpen,
+    onClose,
+    nestedActive: isScheduleOpen,
+  });
+
+  const { handleBackdropClick: handleScheduleBackdropClick } = useModalUx({
+    isOpen: isScheduleOpen,
+    onClose: () => setIsScheduleOpen(false),
+  });
+
   if (!isOpen) return null;
 
-  // Limpa apenas as 9 datas pedagógicas
-  const handleClearDates = () => {
+  // Limpa todos os dados da tela 1 (Dados Cadastrais, Ciclo Pedagógico e Horários)
+  const handleClearData = () => {
+    const hasAnyData =
+      matricula ||
+      nome ||
+      email ||
+      telefone ||
+      instrutor ||
+      dataNascimento ||
+      dataInicioCurso ||
+      dataTerminoCurso ||
+      dataLinhaVida ||
+      dataForm1 ||
+      dataForm2 ||
+      dataDreamday ||
+      dataFechamento1 ||
+      dataFechamento2 ||
+      dataFechamento3 ||
+      activeDaysList.length > 0;
+
+    if (hasAnyData && typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        'Deseja realmente limpar todos os campos preenchidos nos Dados Cadastrais?'
+      );
+      if (!confirmed) return;
+    }
+
+    setMatricula('');
+    setNome('');
+    setEmail('');
+    setTelefone('');
+    setInstrutor('');
+    setDataNascimento('');
     setDataInicioCurso('');
     setDataTerminoCurso('');
     setDataLinhaVida('');
@@ -220,6 +264,8 @@ export function StudentModal({
     setDataFechamento1('');
     setDataFechamento2('');
     setDataFechamento3('');
+    setSchedules({ ...DEFAULT_SCHEDULE });
+    setErrorMessage(null);
   };
 
   const handleScheduleBlur = (dia: Weekday, field: 'inicio' | 'fim') => {
@@ -335,7 +381,10 @@ export function StudentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
+    <div
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150"
+    >
       <div
         className="bg-[#242424] rounded-2xl max-w-6xl w-full max-h-[94vh] flex flex-col shadow-2xl border border-slate-700 overflow-hidden transform animate-in zoom-in-95 duration-150 text-white"
         role="dialog"
@@ -505,7 +554,7 @@ export function StudentModal({
                   />
                 </div>
 
-                {/* Agendamento Múltiplo de Horários (Conforme Imagem 2 do Sistema Desktop) */}
+                {/* Agendamentos de Horários */}
                 <div className="pt-2">
                   <button
                     type="button"
@@ -515,7 +564,7 @@ export function StudentModal({
                   >
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-[#38bdf8]" />
-                      <span>Agendamento Múltiplo</span>
+                      <span>Agendamentos</span>
                     </div>
                     {activeDaysList.length > 0 ? (
                       <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-700/60 px-2 py-0.5 rounded-full">
@@ -677,8 +726,8 @@ export function StudentModal({
                   </div>
                 </div>
 
-                {/* Bloco de Ações Rápidas */}
-                <div className="pt-3 border-t border-slate-700/80 space-y-2">
+                {/* Bloco de Avanço */}
+                <div className="pt-3 border-t border-slate-700/80">
                   <button
                     type="button"
                     onClick={() => setActiveStep('cursos')}
@@ -687,17 +736,6 @@ export function StudentModal({
                     <span>PRÓXIMO: CURSOS CONTRATADOS</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleClearDates}
-                      className="flex-1 py-1.5 px-2 rounded-xl text-[11px] font-semibold text-rose-300 bg-rose-950/40 hover:bg-rose-900/40 border border-rose-800/50 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      <span>Limpar Datas</span>
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -717,12 +755,26 @@ export function StudentModal({
           )}
         </div>
 
-        {/* Rodapé com Navegação e Botão de Salvar */}
+        {/* Rodapé com Navegação, Limpar Dados e Botão de Salvar */}
         <div className="px-6 py-3.5 bg-[#1e1e1e] border-t border-slate-700/80 flex items-center justify-between">
-          <div className="text-xs font-medium text-slate-400">
-            {activeStep === 'dados'
-              ? 'Passo 1 de 2: Dados Cadastrais'
-              : 'Passo 2 de 2: Cursos Contratados'}
+          <div className="flex items-center gap-4">
+            <div className="text-xs font-medium text-slate-400">
+              {activeStep === 'dados'
+                ? 'Passo 1 de 2: Dados Cadastrais'
+                : 'Passo 2 de 2: Cursos Contratados'}
+            </div>
+
+            {activeStep === 'dados' && (
+              <button
+                type="button"
+                onClick={handleClearData}
+                className="py-1 px-3 rounded-lg text-[11px] font-semibold text-rose-300 hover:text-white bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/50 transition-colors flex items-center gap-1.5 shadow-2xs"
+                title="Limpar todos os campos preenchidos nos dados cadastrais"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Limpar Dados</span>
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -778,19 +830,22 @@ export function StudentModal({
       </div>
 
       {/* ============================================================== */}
-      {/* POPUP MODAL: AGENDAMENTO MÚLTIPLO (CONFORME IMAGEM 2)           */}
+      {/* POPUP MODAL: AGENDAMENTOS                                      */}
       {/* ============================================================== */}
       {isScheduleOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in">
+        <div
+          onClick={handleScheduleBackdropClick}
+          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in"
+        >
           <div className="bg-[#242424] text-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-700 space-y-4 animate-in zoom-in-95">
-            {/* Header da Janela de Agendamento */}
+            {/* Header da Janela de Agendamentos */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded bg-[#1f6aa5] flex items-center justify-center text-white text-[10px] font-bold shadow-xs">
                   C
                 </div>
                 <h4 className="text-sm font-bold text-white tracking-wide">
-                  Agendamento Múltiplo
+                  Agendamentos
                 </h4>
               </div>
               <button

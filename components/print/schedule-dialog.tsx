@@ -14,6 +14,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { formatTime } from '../../lib/utils/date-utils';
+import { useModalUx } from '../../lib/hooks/use-modal-ux';
 import type { ScheduleConfig } from '../../types/database';
 
 export const WEEKDAYS = [
@@ -65,6 +66,12 @@ export function ScheduleDialog({
   const [includeVerso, setIncludeVerso] = useState<boolean>(
     initialConfig?.includeVerso ?? true
   );
+
+  // UX de modais: bloqueio de rolagem do body, ESC e clique fora
+  const { handleBackdropClick } = useModalUx({
+    isOpen,
+    onClose,
+  });
 
   // Sincroniza estado quando o modal abre com initialConfig (carregamento automático do aluno)
   useEffect(() => {
@@ -170,7 +177,10 @@ export function ScheduleDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
+    <div
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150"
+    >
       <div className="bg-[#242424] text-white rounded-2xl shadow-2xl border border-slate-700 w-full max-w-md p-6 space-y-4 animate-in zoom-in-95">
         {/* Header do Diálogo (Estilo Imagem 1) */}
         <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">

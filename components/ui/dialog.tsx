@@ -8,6 +8,7 @@ import {
   Info,
   X
 } from 'lucide-react';
+import { useModalUx } from '../../lib/hooks/use-modal-ux';
 
 export type DialogType = 'success' | 'error' | 'warning' | 'info';
 
@@ -93,6 +94,12 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // UX de modais: bloqueio de rolagem do body, ESC e clique fora
+  const { handleBackdropClick } = useModalUx({
+    isOpen: modalOpen,
+    onClose: handleClose,
+  });
+
   const handleConfirm = () => {
     setModalOpen(false);
     if (modalOptions?.onConfirm) {
@@ -119,7 +126,10 @@ export function DialogProvider({ children }: { children: ReactNode }) {
 
       {/* MODAL POP-UP DO SISTEMA */}
       {modalOpen && modalOptions && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+        <div
+          onClick={handleBackdropClick}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+        >
           <div
             className="bg-[#242424] rounded-2xl max-w-md w-full shadow-2xl border border-[#333333] overflow-hidden transform animate-in zoom-in-95 duration-200 text-slate-100"
             role="dialog"

@@ -122,6 +122,23 @@ function ImprimirContent() {
     };
   }, []);
 
+  // Define o título da página dinamicamente para que o navegador sugira o nome correto
+  // ao salvar em PDF (exemplo: "Malone de Souza - Ficha.pdf")
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const originalTitle = document.title;
+
+    if (selectedStudents.length === 1 && selectedStudents[0]?.nome) {
+      document.title = `${selectedStudents[0].nome} - Ficha`;
+    } else if (selectedStudents.length > 1) {
+      document.title = `Fichas Pedagógicas - ${selectedStudents.length} alunos`;
+    }
+
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [selectedStudents]);
+
   // Calcula total de páginas do lote
   const includeVerso = scheduleConfig.includeVerso ?? true;
   const totalPages = selectedStudents.length * (includeVerso ? 2 : 1);
@@ -129,6 +146,11 @@ function ImprimirContent() {
   // Manipulador de impressão nativa via navegador
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
+      if (selectedStudents.length === 1 && selectedStudents[0]?.nome) {
+        document.title = `${selectedStudents[0].nome} - Ficha`;
+      } else if (selectedStudents.length > 1) {
+        document.title = `Fichas Pedagógicas - ${selectedStudents.length} alunos`;
+      }
       window.print();
     }
   };
