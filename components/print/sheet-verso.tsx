@@ -66,10 +66,9 @@ export function SheetVerso({}: SheetVersoProps) {
             y={cell.top}
             width={cell.width}
             height={cell.height}
-            fill={cell.bg || '#FFFFFF'}
+            fill={cell.bg || 'none'}
             stroke="#000000"
-            strokeWidth="0.7"
-            vectorEffect="non-scaling-stroke"
+            strokeWidth="1.1"
           />
         ))}
 
@@ -81,8 +80,7 @@ export function SheetVerso({}: SheetVersoProps) {
           height={TOTAL_H}
           fill="none"
           stroke="#000000"
-          strokeWidth="1.1"
-          vectorEffect="non-scaling-stroke"
+          strokeWidth="1.4"
         />
       </svg>
 
@@ -91,6 +89,10 @@ export function SheetVerso({}: SheetVersoProps) {
         if (!cell.text) return null;
 
         const displayText = cell.text;
+        const isHeader = cell.bg === '#D9D9D9' || cell.bold || cell.addr === 'A1:P1' || cell.addr === 'A37:P37';
+        const fontColor = cell.color;
+        const isBold = isHeader || cell.bold;
+
         const isCentered =
           cell.align === 'center' ||
           cell.text === '/         /' ||
@@ -103,14 +105,18 @@ export function SheetVerso({}: SheetVersoProps) {
               style={{
                 ...pctBoxStyle(cell),
                 color: cell.color,
-                fontSize: scaleFontPx(cell.fontSize),
-                fontWeight: cell.bold ? 700 : 400,
+                fontSize: '9.5px',
+                fontWeight: 700,
               }}
               className="flex items-center justify-center overflow-hidden"
             >
               <span
-                className="whitespace-nowrap block"
-                style={{ transform: 'rotate(-90deg)' }}
+                className="whitespace-nowrap tracking-wider select-none block"
+                style={{
+                  writingMode: 'vertical-rl',
+                  transform: 'rotate(180deg)',
+                  textAlign: 'center',
+                }}
               >
                 {displayText}
               </span>
@@ -123,9 +129,9 @@ export function SheetVerso({}: SheetVersoProps) {
             key={`vtxt-${cell.addr}`}
             style={{
               ...pctBoxStyle(cell),
-              color: cell.color,
+              color: fontColor,
               fontSize: scaleFontPx(cell.fontSize),
-              fontWeight: cell.bold ? 700 : 400,
+              fontWeight: isBold ? 700 : 400,
               paddingLeft: isCentered ? '1px' : '3px',
               paddingRight: '2px',
             }}

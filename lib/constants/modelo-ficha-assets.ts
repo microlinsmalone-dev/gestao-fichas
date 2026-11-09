@@ -617,7 +617,7 @@ export const MODELO_FICHA_LAYOUT = {
       "fontSize": 10.0,
       "bold": true,
       "align": "center",
-      "vertical": false
+      "vertical": true
     },
     {
       "addr": "N7:O8",

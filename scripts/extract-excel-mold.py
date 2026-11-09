@@ -104,7 +104,7 @@ def extract_sheet_vector_cells(sheet, max_row, max_col=16):
                 "fontSize": font_size,
                 "bold": bold,
                 "align": align,
-                "vertical": orientation == 90,
+                "vertical": orientation in (90, 270, -4171, -4170),
             })
 
     return vector_cells
