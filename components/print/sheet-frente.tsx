@@ -32,13 +32,19 @@ const WEEKDAYS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', '
 const TOTAL_W = MODELO_FICHA_LAYOUT.frenteWidthPt;
 const TOTAL_H = MODELO_FICHA_LAYOUT.frenteHeightPt;
 
+// Margem vetorial de respiro de 2.5pt para que traços espessos (strokeWidth 2.4)
+// nas bordas direita e inferior fiquem 100% contidos dentro do viewBox do SVG sem cortes.
+const SVG_PAD = 2.5;
+const VB_W = TOTAL_W + SVG_PAD * 2;
+const VB_H = TOTAL_H + SVG_PAD * 2;
+
 function pctBoxStyle(rect: { left: number; top: number; width: number; height: number }): React.CSSProperties {
   return {
     position: 'absolute',
-    left: `${(rect.left / TOTAL_W) * 100}%`,
-    top: `${(rect.top / TOTAL_H) * 100}%`,
-    width: `${(rect.width / TOTAL_W) * 100}%`,
-    height: `${(rect.height / TOTAL_H) * 100}%`,
+    left: `${((rect.left + SVG_PAD) / VB_W) * 100}%`,
+    top: `${((rect.top + SVG_PAD) / VB_H) * 100}%`,
+    width: `${(rect.width / VB_W) * 100}%`,
+    height: `${(rect.height / VB_H) * 100}%`,
   };
 }
 
@@ -134,7 +140,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
     >
       {/* 1. CAMADA DE GRADE E FUNDOS 100% VETORIAL (SVG CRISP EDGES) */}
       <svg
-        viewBox={`0 0 ${TOTAL_W} ${TOTAL_H}`}
+        viewBox={`-${SVG_PAD} -${SVG_PAD} ${VB_W} ${VB_H}`}
         preserveAspectRatio="none"
         shapeRendering="geometricPrecision"
         className="w-full h-full block pointer-events-none select-none"
@@ -150,7 +156,9 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
             height={cell.height}
             fill={cell.bg === '#D9D9D9' ? '#C8D0DC' : (cell.bg || 'none')}
             stroke="#000000"
-            strokeWidth="1.8"
+            strokeWidth="2.4"
+            strokeLinejoin="miter"
+            strokeLinecap="square"
           />
         ))}
 
@@ -164,7 +172,9 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
             height={wh.height}
             fill="none"
             stroke="#000000"
-            strokeWidth="1.8"
+            strokeWidth="2.4"
+            strokeLinejoin="miter"
+            strokeLinecap="square"
           />
         ))}
 
@@ -180,7 +190,9 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
                 height={dayBoxes.inicio.height}
                 fill="none"
                 stroke="#000000"
-                strokeWidth="1.8"
+                strokeWidth="2.4"
+                strokeLinejoin="miter"
+                strokeLinecap="square"
               />
               <rect
                 x={dayBoxes.fim.left}
@@ -189,7 +201,9 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
                 height={dayBoxes.fim.height}
                 fill="none"
                 stroke="#000000"
-                strokeWidth="1.8"
+                strokeWidth="2.4"
+                strokeLinejoin="miter"
+                strokeLinecap="square"
               />
             </React.Fragment>
           );
@@ -204,6 +218,8 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
           fill="none"
           stroke="#000000"
           strokeWidth="2.4"
+          strokeLinejoin="miter"
+          strokeLinecap="square"
         />
       </svg>
 
