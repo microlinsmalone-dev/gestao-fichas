@@ -30,10 +30,10 @@ function pctBoxStyle(rect: { left: number; top: number; width: number; height: n
 }
 
 function scaleFontPx(excelPt: number): string {
-  if (excelPt >= 16) return '14px';
+  if (excelPt >= 16) return '14.5px';
   if (excelPt >= 10) return '9.2px';
-  if (excelPt >= 9) return '8.5px';
-  return '8px';
+  if (excelPt >= 9) return '8.8px';
+  return '8.2px';
 }
 
 export function SheetVerso({}: SheetVersoProps) {
@@ -43,9 +43,9 @@ export function SheetVerso({}: SheetVersoProps) {
     <div
       className="a4-sheet a4-verso relative bg-white text-black select-none mx-auto print:m-0"
       style={{
-        width: '200mm',
-        height: '286mm',
-        maxHeight: '286mm',
+        width: '198mm',
+        height: '283mm',
+        maxHeight: '283mm',
         overflow: 'hidden',
         fontFamily: "Calibri, 'Segoe UI', Arial, sans-serif",
         WebkitFontSmoothing: 'antialiased',
@@ -55,7 +55,7 @@ export function SheetVerso({}: SheetVersoProps) {
       <svg
         viewBox={`0 0 ${TOTAL_W} ${TOTAL_H}`}
         preserveAspectRatio="none"
-        shapeRendering="crispEdges"
+        shapeRendering="geometricPrecision"
         className="w-full h-full block pointer-events-none select-none"
         style={{ width: '100%', height: '100%' }}
       >
@@ -66,13 +66,13 @@ export function SheetVerso({}: SheetVersoProps) {
             y={cell.top}
             width={cell.width}
             height={cell.height}
-            fill={cell.bg || 'none'}
+            fill={cell.bg === '#D9D9D9' ? '#C8D0DC' : (cell.bg || 'none')}
             stroke="#000000"
-            strokeWidth="1.1"
+            strokeWidth="1.8"
           />
         ))}
 
-        {/* Moldura Externa Fiel ao A1:P49 */}
+        {/* Moldura Externa Fiel ao A1:P49 com traço firme */}
         <rect
           x={0}
           y={0}
@@ -80,7 +80,7 @@ export function SheetVerso({}: SheetVersoProps) {
           height={TOTAL_H}
           fill="none"
           stroke="#000000"
-          strokeWidth="1.4"
+          strokeWidth="2.4"
         />
       </svg>
 
@@ -90,8 +90,10 @@ export function SheetVerso({}: SheetVersoProps) {
 
         const displayText = cell.text;
         const isHeader = cell.bg === '#D9D9D9' || cell.bold || cell.addr === 'A1:P1' || cell.addr === 'A37:P37';
-        const fontColor = cell.color;
-        const isBold = isHeader || cell.bold;
+        // Converte o azul claro #0070C0 para o azul real profundo #003B75 para maior densidade de tinta
+        const fontColor = cell.color === '#0070C0' ? '#003B75' : (cell.color || '#000000');
+        const isMarker = cell.text === '/         /' || cell.text === 'h';
+        const isBold = isHeader || cell.bold || isMarker;
 
         const isCentered =
           cell.align === 'center' ||
@@ -104,8 +106,8 @@ export function SheetVerso({}: SheetVersoProps) {
               key={`vtxt-${cell.addr}`}
               style={{
                 ...pctBoxStyle(cell),
-                color: cell.color,
-                fontSize: '9.5px',
+                color: fontColor,
+                fontSize: '9.8px',
                 fontWeight: 700,
               }}
               className="flex items-center justify-center overflow-hidden"
@@ -131,7 +133,7 @@ export function SheetVerso({}: SheetVersoProps) {
               ...pctBoxStyle(cell),
               color: fontColor,
               fontSize: scaleFontPx(cell.fontSize),
-              fontWeight: isBold ? 700 : 400,
+              fontWeight: isBold ? (isMarker ? 600 : 700) : 400,
               paddingLeft: isCentered ? '1px' : '3px',
               paddingRight: '2px',
             }}

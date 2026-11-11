@@ -408,7 +408,7 @@ function ImprimirContent() {
                     <span className="text-slate-500">Folha A4 (210 x 297 mm)</span>
                   </div>
 
-                  <div className="shadow-2xl rounded-none print:shadow-none bg-white">
+                  <div className="shadow-2xl rounded-none print:shadow-none bg-white w-fit mx-auto">
                     <SheetFrente student={student} schedule={scheduleConfig} />
                   </div>
                 </div>
@@ -427,7 +427,7 @@ function ImprimirContent() {
                       <span className="text-slate-500">Folha A4 (210 x 297 mm)</span>
                     </div>
 
-                    <div className="shadow-2xl rounded-none print:shadow-none bg-white">
+                    <div className="shadow-2xl rounded-none print:shadow-none bg-white w-fit mx-auto">
                       <SheetVerso student={student} />
                     </div>
                   </div>

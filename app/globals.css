@@ -51,7 +51,7 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 4mm 5mm;
+    margin: 5mm 6mm;
   }
 
   *, *:before, *:after {
@@ -63,9 +63,9 @@ body {
   html, body {
     background: #ffffff !important;
     display: block !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 0 !important;
-    width: 200mm !important;
+    width: 198mm !important;
   }
 
   main {
@@ -106,9 +106,11 @@ body {
     color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   .a4-sheet svg rect {
     stroke: #000000 !important;
+    shape-rendering: geometricPrecision !important;
   }
 }

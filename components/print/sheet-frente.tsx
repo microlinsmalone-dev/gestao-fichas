@@ -43,11 +43,11 @@ function pctBoxStyle(rect: { left: number; top: number; width: number; height: n
 }
 
 function scaleFontPx(excelPt: number): string {
-  // Escala proporcional do Excel (FitToPagesWide=1, FitToPagesTall=1 em A4)
+  // Escala proporcional do Excel com boa legibilidade em papel A4
   if (excelPt >= 18) return '15.5px';
-  if (excelPt >= 10) return '9px';
-  if (excelPt >= 9) return '8.5px';
-  return '7.8px';
+  if (excelPt >= 10) return '9.2px';
+  if (excelPt >= 9) return '8.8px';
+  return '8.2px';
 }
 
 export function SheetFrente({ student, schedule }: SheetFrenteProps) {
@@ -124,9 +124,9 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
     <div
       className="a4-sheet a4-frente relative bg-white text-black select-none mx-auto print:m-0"
       style={{
-        width: '200mm',
-        height: '286mm',
-        maxHeight: '286mm',
+        width: '198mm',
+        height: '283mm',
+        maxHeight: '283mm',
         overflow: 'hidden',
         fontFamily: "Calibri, 'Segoe UI', Arial, sans-serif",
         WebkitFontSmoothing: 'antialiased',
@@ -136,7 +136,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
       <svg
         viewBox={`0 0 ${TOTAL_W} ${TOTAL_H}`}
         preserveAspectRatio="none"
-        shapeRendering="crispEdges"
+        shapeRendering="geometricPrecision"
         className="w-full h-full block pointer-events-none select-none"
         style={{ width: '100%', height: '100%' }}
       >
@@ -148,9 +148,9 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
             y={cell.top}
             width={cell.width}
             height={cell.height}
-            fill={cell.bg || 'none'}
+            fill={cell.bg === '#D9D9D9' ? '#C8D0DC' : (cell.bg || 'none')}
             stroke="#000000"
-            strokeWidth="1.1"
+            strokeWidth="1.8"
           />
         ))}
 
@@ -164,7 +164,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
             height={wh.height}
             fill="none"
             stroke="#000000"
-            strokeWidth="1.1"
+            strokeWidth="1.8"
           />
         ))}
 
@@ -180,7 +180,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
                 height={dayBoxes.inicio.height}
                 fill="none"
                 stroke="#000000"
-                strokeWidth="1.1"
+                strokeWidth="1.8"
               />
               <rect
                 x={dayBoxes.fim.left}
@@ -189,13 +189,13 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
                 height={dayBoxes.fim.height}
                 fill="none"
                 stroke="#000000"
-                strokeWidth="1.1"
+                strokeWidth="1.8"
               />
             </React.Fragment>
           );
         })}
 
-        {/* Moldura Externa Fiel ao A1:P59 */}
+        {/* Moldura Externa Fiel ao A1:P59 com traço firme */}
         <rect
           x={0}
           y={0}
@@ -203,7 +203,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
           height={TOTAL_H}
           fill="none"
           stroke="#000000"
-          strokeWidth="1.4"
+          strokeWidth="2.4"
         />
       </svg>
 
@@ -224,8 +224,11 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
           cell.text === 'h';
 
         const isHeader = cell.bg === '#D9D9D9' || cell.bold || cell.addr === 'A1:P1';
-        const fontColor = cell.color;
-        const isBold = isHeader || cell.bold;
+        // Converte o azul claro #0070C0 para o azul real profundo #003B75 para maior densidade de tinta
+        const fontColor = cell.color === '#0070C0' ? '#003B75' : (cell.color || '#000000');
+        const isMarker = cell.text === '/         /' || cell.text === 'h';
+        const isCourseSlot = cell.row >= 10 && cell.row <= 15 && (cell.col === 1 || cell.col === 4 || cell.col === 8);
+        const isBold = isHeader || cell.bold || isCourseSlot || isMarker;
 
         if (cell.vertical) {
           return (
@@ -233,8 +236,8 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
               key={`txt-${cell.addr}`}
               style={{
                 ...pctBoxStyle(cell),
-                color: cell.color,
-                fontSize: '9.5px',
+                color: fontColor,
+                fontSize: '9.8px',
                 fontWeight: 700,
               }}
               className="flex items-center justify-center overflow-hidden"
@@ -266,7 +269,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
               ...pctBoxStyle(boxRect),
               color: fontColor,
               fontSize: scaleFontPx(cell.fontSize),
-              fontWeight: isBold ? 700 : 400,
+              fontWeight: isBold ? (isMarker ? 600 : 700) : 400,
               paddingLeft: isCentered ? '1px' : '3px',
               paddingRight: '2px',
             }}
@@ -292,9 +295,9 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
           key={`lbl-${wh.label}`}
           style={{
             ...pctBoxStyle(wh),
-            fontSize: '8.5px',
+            fontSize: '8.8px',
           }}
-          className="flex items-center justify-center text-center text-black font-semibold leading-none"
+          className="flex items-center justify-center text-center text-black font-bold leading-none"
         >
           {wh.label}
         </div>
@@ -309,18 +312,20 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
             <div
               style={{
                 ...pctBoxStyle(dayBoxes.inicio),
-                fontSize: '8.5px',
+                fontSize: '8.8px',
+                fontWeight: times.inicio ? 700 : 600,
               }}
-              className="flex items-center justify-center text-center text-black font-normal leading-none"
+              className="flex items-center justify-center text-center text-black leading-none"
             >
               {times.inicio || 'h'}
             </div>
             <div
               style={{
                 ...pctBoxStyle(dayBoxes.fim),
-                fontSize: '8.5px',
+                fontSize: '8.8px',
+                fontWeight: times.fim ? 700 : 600,
               }}
-              className="flex items-center justify-center text-center text-black font-normal leading-none"
+              className="flex items-center justify-center text-center text-black leading-none"
             >
               {times.fim || 'h'}
             </div>
