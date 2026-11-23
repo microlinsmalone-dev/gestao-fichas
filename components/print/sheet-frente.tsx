@@ -32,9 +32,9 @@ const WEEKDAYS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', '
 const TOTAL_W = MODELO_FICHA_LAYOUT.frenteWidthPt;
 const TOTAL_H = MODELO_FICHA_LAYOUT.frenteHeightPt;
 
-// Margem vetorial de respiro de 2.5pt para que traços espessos (strokeWidth 2.4)
-// nas bordas direita e inferior fiquem 100% contidos dentro do viewBox do SVG sem cortes.
-const SVG_PAD = 2.5;
+// Margem vetorial de respiro de 4pt para que todos os traços
+// nas 4 bordas fiquem 100% contidos dentro do viewBox do SVG sem cortes.
+const SVG_PAD = 4;
 const VB_W = TOTAL_W + SVG_PAD * 2;
 const VB_H = TOTAL_H + SVG_PAD * 2;
 
@@ -128,17 +128,17 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
 
   return (
     <div
-      className="a4-sheet a4-frente relative bg-white text-black select-none mx-auto print:m-0"
+      className="a4-sheet a4-frente relative bg-white text-black select-none mx-auto print:mx-auto print:my-0"
       style={{
-        width: '198mm',
-        height: '283mm',
-        maxHeight: '283mm',
+        width: '196mm',
+        height: '282mm',
+        maxHeight: '282mm',
         overflow: 'hidden',
         fontFamily: "Calibri, 'Segoe UI', Arial, sans-serif",
         WebkitFontSmoothing: 'antialiased',
       }}
     >
-      {/* 1. CAMADA DE GRADE E FUNDOS 100% VETORIAL (SVG CRISP EDGES) */}
+      {/* 1. CAMADA DE GRADE E FUNDOS 100% VETORIAL (2 CAMADAS: FUNDOS -> GRADE UNIFORME) */}
       <svg
         viewBox={`-${SVG_PAD} -${SVG_PAD} ${VB_W} ${VB_H}`}
         preserveAspectRatio="none"
@@ -146,7 +146,22 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
         className="w-full h-full block pointer-events-none select-none"
         style={{ width: '100%', height: '100%' }}
       >
-        {/* Células e Áreas Mescladas do ModeloFicha.xlsx */}
+        {/* CAMADA 1A: FUNDOS COLORIDOS (SEM BORDA, PARA NUNCA ENCOBRIR TRAÇOS VIZINHOS) */}
+        {frenteVectorCells
+          .filter((cell) => Boolean(cell.bg))
+          .map((cell) => (
+            <rect
+              key={`bg-${cell.addr}`}
+              x={cell.left}
+              y={cell.top}
+              width={cell.width}
+              height={cell.height}
+              fill={cell.bg === '#D9D9D9' ? '#C8D0DC' : cell.bg!}
+              stroke="none"
+            />
+          ))}
+
+        {/* CAMADA 1B: GRADE COMPLETA (100% DAS LINHAS INTERNAS E EXTERNAS COM A MESMA FORÇA) */}
         {frenteVectorCells.map((cell) => (
           <rect
             key={cell.addr}
@@ -154,9 +169,10 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
             y={cell.top}
             width={cell.width}
             height={cell.height}
-            fill={cell.bg === '#D9D9D9' ? '#C8D0DC' : (cell.bg || 'none')}
+            fill="none"
             stroke="#000000"
-            strokeWidth="2.4"
+            strokeWidth="1.8"
+            vectorEffect="non-scaling-stroke"
             strokeLinejoin="miter"
             strokeLinecap="square"
           />
@@ -172,7 +188,8 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
             height={wh.height}
             fill="none"
             stroke="#000000"
-            strokeWidth="2.4"
+            strokeWidth="1.8"
+            vectorEffect="non-scaling-stroke"
             strokeLinejoin="miter"
             strokeLinecap="square"
           />
@@ -190,7 +207,8 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
                 height={dayBoxes.inicio.height}
                 fill="none"
                 stroke="#000000"
-                strokeWidth="2.4"
+                strokeWidth="1.8"
+                vectorEffect="non-scaling-stroke"
                 strokeLinejoin="miter"
                 strokeLinecap="square"
               />
@@ -201,7 +219,8 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
                 height={dayBoxes.fim.height}
                 fill="none"
                 stroke="#000000"
-                strokeWidth="2.4"
+                strokeWidth="1.8"
+                vectorEffect="non-scaling-stroke"
                 strokeLinejoin="miter"
                 strokeLinecap="square"
               />
@@ -209,7 +228,7 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
           );
         })}
 
-        {/* Moldura Externa Fiel ao A1:P59 com traço firme */}
+        {/* Moldura Externa Fiel ao A1:P59 com exatamente a mesma força da grade */}
         <rect
           x={0}
           y={0}
@@ -217,7 +236,8 @@ export function SheetFrente({ student, schedule }: SheetFrenteProps) {
           height={TOTAL_H}
           fill="none"
           stroke="#000000"
-          strokeWidth="2.4"
+          strokeWidth="1.8"
+          vectorEffect="non-scaling-stroke"
           strokeLinejoin="miter"
           strokeLinecap="square"
         />

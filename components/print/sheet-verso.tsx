@@ -19,9 +19,9 @@ interface SheetVersoProps {
 const TOTAL_W = MODELO_FICHA_LAYOUT.versoWidthPt;
 const TOTAL_H = MODELO_FICHA_LAYOUT.versoHeightPt;
 
-// Margem vetorial de respiro de 2.5pt para que traços espessos (strokeWidth 2.4)
-// nas bordas direita e inferior fiquem 100% contidos dentro do viewBox do SVG sem cortes.
-const SVG_PAD = 2.5;
+// Margem vetorial de respiro de 4pt para que todos os traços
+// nas 4 bordas fiquem 100% contidos dentro do viewBox do SVG sem cortes.
+const SVG_PAD = 4;
 const VB_W = TOTAL_W + SVG_PAD * 2;
 const VB_H = TOTAL_H + SVG_PAD * 2;
 
@@ -47,17 +47,17 @@ export function SheetVerso({}: SheetVersoProps) {
 
   return (
     <div
-      className="a4-sheet a4-verso relative bg-white text-black select-none mx-auto print:m-0"
+      className="a4-sheet a4-verso relative bg-white text-black select-none mx-auto print:mx-auto print:my-0"
       style={{
-        width: '198mm',
-        height: '283mm',
-        maxHeight: '283mm',
+        width: '196mm',
+        height: '282mm',
+        maxHeight: '282mm',
         overflow: 'hidden',
         fontFamily: "Calibri, 'Segoe UI', Arial, sans-serif",
         WebkitFontSmoothing: 'antialiased',
       }}
     >
-      {/* 1. CAMADA DE GRADE E FUNDOS 100% VETORIAL (SVG CRISP EDGES) */}
+      {/* 1. CAMADA DE GRADE E FUNDOS 100% VETORIAL (2 CAMADAS: FUNDOS -> GRADE UNIFORME) */}
       <svg
         viewBox={`-${SVG_PAD} -${SVG_PAD} ${VB_W} ${VB_H}`}
         preserveAspectRatio="none"
@@ -65,6 +65,22 @@ export function SheetVerso({}: SheetVersoProps) {
         className="w-full h-full block pointer-events-none select-none"
         style={{ width: '100%', height: '100%' }}
       >
+        {/* CAMADA 1A: FUNDOS COLORIDOS (SEM BORDA, PARA NUNCA ENCOBRIR TRAÇOS VIZINHOS) */}
+        {versoVectorCells
+          .filter((cell) => Boolean(cell.bg))
+          .map((cell) => (
+            <rect
+              key={`bg-${cell.addr}`}
+              x={cell.left}
+              y={cell.top}
+              width={cell.width}
+              height={cell.height}
+              fill={cell.bg === '#D9D9D9' ? '#C8D0DC' : cell.bg!}
+              stroke="none"
+            />
+          ))}
+
+        {/* CAMADA 1B: GRADE COMPLETA (100% DAS LINHAS INTERNAS E EXTERNAS COM A MESMA FORÇA) */}
         {versoVectorCells.map((cell) => (
           <rect
             key={cell.addr}
@@ -72,15 +88,16 @@ export function SheetVerso({}: SheetVersoProps) {
             y={cell.top}
             width={cell.width}
             height={cell.height}
-            fill={cell.bg === '#D9D9D9' ? '#C8D0DC' : (cell.bg || 'none')}
+            fill="none"
             stroke="#000000"
-            strokeWidth="2.4"
+            strokeWidth="1.8"
+            vectorEffect="non-scaling-stroke"
             strokeLinejoin="miter"
             strokeLinecap="square"
           />
         ))}
 
-        {/* Moldura Externa Fiel ao A1:P49 com traço firme */}
+        {/* Moldura Externa Fiel ao A1:P49 com exatamente a mesma força da grade */}
         <rect
           x={0}
           y={0}
@@ -88,7 +105,8 @@ export function SheetVerso({}: SheetVersoProps) {
           height={TOTAL_H}
           fill="none"
           stroke="#000000"
-          strokeWidth="2.4"
+          strokeWidth="1.8"
+          vectorEffect="non-scaling-stroke"
           strokeLinejoin="miter"
           strokeLinecap="square"
         />
